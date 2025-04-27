@@ -5,7 +5,8 @@
 GuildInventory is a shared inventory for guilds. Members can add items that they want to make available to other members.
 For now you'll have to manually message/mail members to request items.
 
-Still BETA! It shouldn't happen, but if you see a green/yellow dot continuously blinking in the top right corner do a `/reload`!!
+Still BETA!
+If you see a green/yellow dot continuously blinking in the top right corner do a `/reload`!!
 
 ---
 
