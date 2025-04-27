@@ -1,0 +1,3 @@
+<Bindings>
+	<Binding name="Toggle guild inventory" header="GUILDINVENTORY">GuildInventory.gui.toggle()</Binding>
+</Bindings>
