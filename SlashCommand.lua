@@ -86,11 +86,11 @@ function M.new( name, slash_commands )
 
 	local function init()
 		register( "__DEFAULT__", function()
-			DEFAULT_CHAT_FRAME:AddMessage( string.format( "|cff71d5ff%s Help|r", m.name ) )
-			DEFAULT_CHAT_FRAME:AddMessage( "|cff71d5ff/gi toggle|r|||cff71d5ffshow|r|||cff71d5ffhide|r Toggle/show/hide guild inventory" )
-			DEFAULT_CHAT_FRAME:AddMessage( "|cff71d5ff/gi clear|r Clear guild inventory" )
-			DEFAULT_CHAT_FRAME:AddMessage( "|cff71d5ff/gi refresh|r Refresh guild inventory" )
-			DEFAULT_CHAT_FRAME:AddMessage( "|cff71d5ff/gi broadcast|r Sends your version of the guild inventory to other members" )
+			DEFAULT_CHAT_FRAME:AddMessage( string.format( "|c%s%s Help|r", m.tagcolor, m.name ) )
+			DEFAULT_CHAT_FRAME:AddMessage( "|c" .. m.tagcolor .. "/gi toggle|r|||c".. m.tagcolor .. "show|r|||c" .. m.tagcolor .. "hide|r Toggle/show/hide guild inventory" )
+			DEFAULT_CHAT_FRAME:AddMessage( "|c" .. m.tagcolor .. "/gi clear|r Clear guild inventory" )
+			DEFAULT_CHAT_FRAME:AddMessage( "|c" .. m.tagcolor .. "/gi refresh|r Refresh guild inventory" )
+			DEFAULT_CHAT_FRAME:AddMessage( "|c" .. m.tagcolor .. "/gi broadcast|r Sends your version of the guild inventory to other members" )
 		end )
 
 		register( { "toggle", "t" }, function()
@@ -115,6 +115,10 @@ function M.new( name, slash_commands )
 
 		register( { "broadcast", "b" }, function()
 			m.msg.send_inventory()
+		end )
+
+		register( { "versioncheck", "vc" }, function()
+			m.msg.version_check()
 		end )
 	end
 

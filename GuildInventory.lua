@@ -2,6 +2,7 @@
 GuildInventory = GuildInventory or {}
 GuildInventory.name = "GuildInventory"
 GuildInventory.prefix = "GUILDINV"
+GuildInventory.tagcolor = "FF8B3EE2"
 GuildInventory.events = {}
 GuildInventory.debug_enabled = false
 
@@ -47,6 +48,7 @@ function GuildInventory.events.PLAYER_LOGIN()
   m.db = GuildInventoryDB
   m.db.inventory = m.db.inventory or {}
   m.player = UnitName( "player" )
+  m.player_class = UnitClass( "player" )
 
   ---@type InventoryGui
   m.gui = m.Gui.new()

@@ -8,7 +8,9 @@ local MessageCommand = {
 	Items = "ITEMS",
 	RequestInventory = "RINV",
 	Ping = "PING",
-	Pong = "PONG"
+	Pong = "PONG",
+	VersionCheck = "VERSIONCHECK",
+	Version = "VERSION",
 }
 
 ---@alias MessageCommand
@@ -17,6 +19,8 @@ local MessageCommand = {
 ---| "RINV"
 ---| "PING"
 ---| "PONG"
+---| "VERSIONCHECK"
+---| "VERSION"
 
 if m.MessageHandler then return end
 
@@ -25,6 +29,7 @@ if m.MessageHandler then return end
 ---@field send_items fun( items: table<integer, Item> )
 ---@field send_inventory fun()
 ---@field request_inventory fun( force: boolean )
+---@field version_check fun()
 ---@field on_message fun( data_str: string, sender: string )
 local M = {}
 
@@ -166,6 +171,10 @@ function M.new()
 		end
 	end
 
+	local function version_check()
+		broadcast( MessageCommand.VersionCheck )
+	end
+
 	---@param command string
 	---@param data table
 	---@param sender string
@@ -192,6 +201,10 @@ function M.new()
 		elseif command == MessageCommand.Pong and pinging then
 			pinging = false
 			broadcast( MessageCommand.RequestInventory, { player = sender } )
+		elseif command == MessageCommand.VersionCheck then
+			broadcast( MessageCommand.Version, { version = m.version, class = m.player_class } )
+		elseif command == MessageCommand.Version then
+			m.info( string.format( "%s [v%s]", m.colorize_player_by_class( sender, data.class ), data.version ), true )
 		end
 	end
 
@@ -228,6 +241,7 @@ function M.new()
 		send_items = send_items,
 		send_inventory = send_inventory,
 		request_inventory = request_inventory,
+		version_check = version_check,
 		on_message = on_message,
 	}
 end

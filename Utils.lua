@@ -49,10 +49,19 @@ function M.get_item_link( item )
 	return string.format( "|cFF%s|Hitem:%d:0:0:0|h[%s]|h|r", hex, item.id, item.name )
 end
 
+function M.colorize_player_by_class( name, class )
+	if not class then return name end
+	local color = RAID_CLASS_COLORS[ string.upper( class ) ]
+	if not color.colorStr then
+		color.colorStr = string.format( "ff%02x%02x%02x", color.r * 255, color.g * 255, color.b * 255 )
+	end
+	return "|c" .. color.colorStr .. name .. "|r"
+end
+
 ---@param message string
 ---@param short boolean?
 function M.info( message, short )
-	local tag = short and "|cff71d5ffGI|r" or "|cff71d5ffGuildInventory"
+	local tag = string.format( "|c%s%s|r", M.tagcolor, short and "GI" or "GuildInventory" )
 	DEFAULT_CHAT_FRAME:AddMessage( string.format( "%s: %s", tag, message ) )
 end
 
