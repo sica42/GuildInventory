@@ -90,6 +90,7 @@ function M.new( name, slash_commands )
 			DEFAULT_CHAT_FRAME:AddMessage( "|cff71d5ff/gi toggle|r|||cff71d5ffshow|r|||cff71d5ffhide|r Toggle/show/hide guild inventory" )
 			DEFAULT_CHAT_FRAME:AddMessage( "|cff71d5ff/gi clear|r Clear guild inventory" )
 			DEFAULT_CHAT_FRAME:AddMessage( "|cff71d5ff/gi refresh|r Refresh guild inventory" )
+			DEFAULT_CHAT_FRAME:AddMessage( "|cff71d5ff/gi broadcast|r Sends your version of the guild inventory to other members" )
 		end )
 
 		register( { "toggle", "t" }, function()
@@ -110,6 +111,10 @@ function M.new( name, slash_commands )
 
 		register( { "clear", "c" }, function()
 			m.db.inventory = {}
+		end )
+
+		register( { "broadcast", "b" }, function()
+			m.msg.send_inventory()
 		end )
 	end
 
