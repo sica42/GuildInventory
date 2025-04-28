@@ -12,7 +12,8 @@ If you see a green/yellow dot continuously blinking in the top right corner do a
 
 ## ✨ Usage
 
-Drag & drop items from your inventory or bank to add items.
+Drag & drop items from your inventory or bank to add items. If you put an item in the last slot the inventory will expand.
+The ordering of items is local to you only, so you can use drag & drop to order them however you want. Note that any items being added during a sync will be added to the first avaiable slots.
 
 Clicking an item will show you who has the item avaiable. You can also manually update your own count after clicking an item.
 Setting your count to 0 will remove the item if no other members has added any.
@@ -30,8 +31,11 @@ Type `/gi` or `/guildinventory` in chat to see all options.
 - `/gi show` - Open guild inventory.
 - `/gi close` - Close guild inventory.
 - `/gi toggle` - Toggle gulid inventory.
-- `/gi clear` - Clears your local guild inventory (still beta, so use this if inventory gets out of sync).
-- `/gi refresh` - Updated inventory from other members (it will update automatically, but use this after `/gi clear`).
+
+Commands avaiable while in BETA:
+- `/gi clear` - Clears your local guild inventory.
+- `/gi refresh` - Updated inventory from other members.
+- `/gi broadcast` - Broadcast your version of the inventory to other members.  
 
 ---
 
