@@ -106,7 +106,11 @@ function M.new( name, slash_commands )
 		end )
 
 		register( { "refresh", "r" }, function()
-			m.msg.request_inventory( true )
+			m.msg.request_inventory()
+		end )
+
+		register( { "tradeskills", "ts" }, function()
+			m.msg.request_tradeskills()
 		end )
 
 		register( { "clear", "c" }, function()
@@ -119,6 +123,10 @@ function M.new( name, slash_commands )
 
 		register( { "versioncheck", "vc" }, function()
 			m.msg.version_check()
+		end )
+
+		register( { "tradeskills", "ts" }, function()
+			m.tsgui.toggle()
 		end )
 	end
 

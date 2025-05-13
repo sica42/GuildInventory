@@ -1,5 +1,12 @@
 ---@class GuildInventory
 GuildInventory = GuildInventory or {}
+
+---@class GuildInventory
+local m = GuildInventory
+
+---@diagnostic disable-next-line: undefined-global
+local lib_stub = LibStub
+
 GuildInventory.name = "GuildInventory"
 GuildInventory.prefix = "GUILDINV"
 GuildInventory.tagcolor = "FF8B3EE2"
@@ -8,19 +15,40 @@ GuildInventory.debug_enabled = false
 
 BINDING_HEADER_GUILDINVENTORY = "GuildInventory"
 
+---@class ItemData
+---@field count integer
+---@field price integer?
+
 ---@class Item
 ---@field id integer
 ---@field name string
 ---@field icon string
 ---@field quality integer
----@field count table<string, integer>
+---@field deleted integer?
+---@field data table<string, ItemData>
 
 ---@class DBItem: Item
 ---@field slot integer
----@field deleted integer?
 
----@class GuildInventory
-local m = GuildInventory
+---@class RequestItem: Item
+---@field request_count integer
+
+---@alias NotAceTimer any
+---@alias TimerId number
+
+---@class AceTimer
+---@field ScheduleTimer fun( self: NotAceTimer, callback: function, delay: number, arg: any ): TimerId
+---@field ScheduleRepeatingTimer fun( self: NotAceTimer, callback: function, delay: number, arg: any ): TimerId
+---@field CancelTimer fun( self: NotAceTimer, timer_id: number )
+---@field TimeLeft fun( self: NotAceTimer, timer_id: number )
+
+---@class AceSerializer
+---@field Serialize fun( self: any, ... ): string
+---@field Deserialize fun( self: any, str: string ): any
+
+---@class AceComm
+---@field RegisterComm fun( self: any, prefix: string, method: function? )
+---@field SendCommMessage fun( self: any, prefix: string, text: string, distribution: string, target: string?, prio: "BULK"|"NORMAL"|"ALERT"?, callbackFn: function?, callbackArg: any? )
 
 function GuildInventory:init()
   self.frame = CreateFrame( "Frame" )
@@ -37,34 +65,59 @@ end
 
 function GuildInventory.events.ADDON_LOADED()
   if arg1 == m.name then
-    m.msg = m.MessageHandler.new()
+    ---@type AceTimer
+    m.ace_timer = lib_stub( "AceTimer-3.0" )
+
+    ---@type AceSerializer
+    m.ace_serializer = lib_stub( "AceSerializer-3.0" )
+
+    ---@type AceComm
+    m.ace_comm = lib_stub( "AceComm-3.0" )
+
+    ---@type MessageHandler
+    m.msg = m.MessageHandler.new( m.ace_timer, m.ace_serializer, m.ace_comm )
+
+    ---@type Notifications
+    m.notify = m.Notifications.new( m.ace_timer )
+
+    ---@type InventoryGui
+    m.gui = m.Gui.new( m.FrameBuilder, m.ace_serializer, m.notify )
+
+    ---@type TradeskillGui
+    m.tsgui = m.Tradeskills.new()
+
+    ---@type SlashCommand
+    m.slash_command = m.SlashCommand.new( m.name, { "gi", "guildinventory" } )
+
     m.version = GetAddOnMetadata( m.name, "Version" )
     m.info( string.format( "(v%s) Loaded", m.version ) )
   end
 end
 
 function GuildInventory.events.PLAYER_LOGIN()
+  -- Initialize DB
   GuildInventoryDB = GuildInventoryDB or {}
   m.db = GuildInventoryDB
   m.db.inventory = m.db.inventory or {}
+  m.db.requests = m.db.requests or {}
+  m.db.tradeskills = m.db.tradeskills or {}
+
+  if m.db.inventory[ 1 ].count then
+    m.convert()
+  end
+
   m.player = UnitName( "player" )
   m.player_class = UnitClass( "player" )
-
-  ---@type InventoryGui
-  m.gui = m.Gui.new()
-
-  ---@type SlashCommand
-  m.slash_command = m.SlashCommand.new( m.name, { "gi", "guildinventory" } )
   m.slash_command.init()
 
-  ---@type MessageHandler
-  m.msg.request_inventory()
-end
+  m.check_requests()
+  m.msg.request_itemrequests()
 
-function GuildInventory.events.CHAT_MSG_ADDON()
-  if arg1 == m.prefix and arg4 ~= m.player then
-    m.msg.on_message( arg2, arg4 )
-  end
+  m.tooltip = CreateFrame( "GameTooltip", "GuildInventoryTooltip", nil, "GameTooltipTemplate" )
+  m.tooltip:SetOwner( WorldFrame, "ANCHOR_NONE" )
+
+  m.update_inventory()
+  m.update_tradeskills()
 end
 
 function GuildInventory.events.BANKFRAME_OPENED()
@@ -78,6 +131,87 @@ function GuildInventory.events.BANKFRAME_CLOSED()
   m.bank_open = false
   if m.gui.is_visible() then
     m.gui.enable_bank( false )
+  end
+end
+
+function GuildInventory.events.TRADE_SKILL_SHOW()
+  local reverse = m.build_reverse_trade_map( GetLocale() )
+  local tradeskill = reverse[ GetTradeSkillLine() ]
+  local skills = {
+    Alchemy = true,
+    Blacksmithing = true,
+    Engineering = true,
+    Leatherworking = true,
+    Tailoring = true
+  }
+
+  if skills[ tradeskill ] then
+    local num = GetNumTradeSkills()
+
+    for i = 1, GetNumTradeSkills() do
+      local _, type = GetTradeSkillInfo( i )
+      if type == "header" then
+        num = num - 1
+      end
+    end
+
+    m.db.tradeskills[ tradeskill ] = m.db.tradeskills[ tradeskill ] or {}
+
+    if m.count( m.db.tradeskills[ tradeskill ] ) ~= num then
+      for i = 1, GetNumTradeSkills() do
+        local _, type = GetTradeSkillInfo( i )
+        if type ~= "header" then
+          local item_link = GetTradeSkillItemLink( i )
+          m.update_tradeskill_item( tradeskill, item_link, m.player )
+        end
+      end
+      m.msg.send_tradeskill( tradeskill )
+    end
+  end
+end
+
+function GuildInventory.events.CRAFT_SHOW()
+  local reverse = m.build_reverse_trade_map( GetLocale() )
+  local tradeskill = reverse[ GetCraftName() ]
+
+  if tradeskill == "Enchanting" then
+    local num = GetNumCrafts()
+
+    m.db.tradeskills[ tradeskill ] = m.db.tradeskills[ tradeskill ] or {}
+
+    if m.count( m.db.tradeskills[ tradeskill ] ) ~= num then
+      for i = 1, GetNumCrafts() do
+        local item_link = GetCraftItemLink( i )
+        m.update_tradeskill_item( tradeskill, item_link, m.player )
+      end
+      m.msg.send_tradeskill( tradeskill )
+    end
+  end
+end
+
+---@param tradeskill string
+---@param item_link ItemLink
+---@param player string|table
+function GuildInventory.update_tradeskill_item( tradeskill, item_link, player )
+  local id = m.get_item_id( item_link )
+  local name = m.get_item_name( item_link )
+  local players = type( player ) == "string" and { player } or player
+
+  if id then
+    if m.db.tradeskills[ tradeskill ][ id ] then
+      for _, p in players do
+        if not m.find( p, m.db.tradeskills[ tradeskill ][ id ].players ) then
+          table.insert( m.db.tradeskills[ tradeskill ][ id ].players, p )
+        end
+      end
+    else
+      m.db.tradeskills[ tradeskill ][ id ] = {
+        id = id,
+        link = item_link,
+        name = name,
+        players = players
+      }
+    end
   end
 end
 
@@ -98,8 +232,10 @@ function GuildInventory.get_cursors_item()
               name = m.get_item_name( item_link ),
               quality = m.get_item_quality( item_id ),
               icon = texture,
-              count = {
-                [ m.player ] = item_count
+              data = {
+                [ m.player ] = {
+                  count = item_count
+                }
               }
             }
           end
@@ -122,6 +258,39 @@ function GuildInventory.get_cursors_item()
   return nil
 end
 
+function GuildInventory.update_inventory()
+  local now = time()
+
+  -- Clear inventory if older then 1 week
+  if m.db.inventory_last_update and m.db.inventory_last_update < now - 604800 then
+    m.db.inventory = {}
+    m.db.inventory_last_update = nil
+  end
+
+  -- Remove deleted items older then 2 days
+  for index, item in m.db.inventory do
+    if item.deleted and now >= item.deleted + 172800 then
+      table.remove( m.db.inventory, index )
+    end
+  end
+
+  -- Request inventory updated if empty or older then 12 hours
+  if not m.db.inventory_last_update or now >= m.db.inventory_last_update + 43200 then
+    m.db.inventory_last_update = now
+    m.msg.request_inventory()
+  end
+end
+
+function GuildInventory.update_tradeskills()
+  local now = time()
+
+  -- Request tradeskills if older then 2 days
+  if not m.db.tradeskills_last_update or now >= m.db.tradeskills_last_update + 172800 then
+    m.db.tradeskills_last_update = now
+    m.msg.request_tradeskills()
+  end
+end
+
 ---@param item Item
 ---@param slot integer?
 ---@param broadcast boolean?
@@ -131,37 +300,34 @@ function GuildInventory.add_item( item, slot, broadcast, add_count )
   local db_item = m.find( item.name, m.db.inventory, "name" )
 
   if db_item then
-    if add_count then
-      db_item.count[ m.player ] = db_item.count[ m.player ] and db_item.count[ m.player ] + item.count[ m.player ] or item.count[ m.player ]
+    if add_count and db_item.data[ m.player ].count then
+      item.data[ m.player ].count = item.data[ m.player ].count + db_item.data[ m.player ].count
     end
-    for player, count in pairs( item.count ) do
-      if not db_item.count[ player ] then
-        db_item.count[ player ] = count
-      else
-        if db_item.count[ player ] and db_item.count[ player ] ~= count then
-          db_item.count[ player ] = count
-        end
+    for player, data in pairs( item.data ) do
+      db_item.data[ player ].count = data.count
+
+      if data.price then
+        db_item.data[ player ].price = data.price
       end
     end
 
-    if db_item.deleted then
+    if db_item.deleted and not item.deleted then
       db_item.deleted = nil
       db_item.slot = (slot and db_item.id == item.id) and slot or m.find_empty_slot()
     end
 
-    if m.count( item.count ) == 0 then
+    if m.count_count( item.data ) <= 0 or item.deleted then
       db_item.slot = 0
-      db_item.deleted = time()
+      db_item.deleted = item.deleted or time()
     end
 
     if broadcast then m.msg.send_item( db_item ) end
-    return
   else
-    if m.count( item.count ) == 0 then return end
+    if m.count_count( item.data ) == 0 then return end
+    if item.deleted then return end
     if slot then
       db_item = m.find( slot, m.db.inventory, "slot" )
       if db_item and db_item.id ~= item.id then
-        print("find new slot")
         slot = m.find_empty_slot()
       end
     else
@@ -174,11 +340,11 @@ function GuildInventory.add_item( item, slot, broadcast, add_count )
       name = item.name,
       icon = item.icon,
       quality = item.quality,
-      count = item.count,
+      data = item.data,
       slot = slot,
     }
-
     table.insert( m.db.inventory, data )
+
     if broadcast then m.msg.send_item( data ) end
   end
 end
@@ -200,20 +366,24 @@ end
 
 ---@param slot_index integer
 ---@param count integer
-function GuildInventory.update_item_count( slot_index, count )
+---@param price number
+---@param broadcast boolean
+function GuildInventory.update_item_data( slot_index, count, price, broadcast )
   ---@type DBItem|nil
   local db_item, index = m.find( slot_index, m.db.inventory, "slot" )
 
-  if db_item and db_item.count[ m.player ] ~= count then
-    db_item.count[ m.player ] = count > 0 and count or nil
+  if db_item and (db_item.data[ m.player ].count ~= count or db_item.data[ m.player ].price ~= price) then
+    db_item.data[ m.player ].count = count
+    db_item.data[ m.player ].price = price
 
-    if m.count( db_item.count ) == 0 then
-      --table.remove( m.db.inventory, index )
+    if m.count_count( db_item.data ) == 0 then
       db_item.slot = 0
       db_item.deleted = time()
     end
 
-    m.msg.send_item( db_item )
+    if broadcast then
+      m.msg.send_item( db_item )
+    end
   end
 end
 
@@ -244,7 +414,7 @@ function GuildInventory.sync_count( loc )
   local updated = {}
 
   for _, item in pairs( m.db.inventory ) do
-    if item.count[ m.player ] then
+    if item.data[ m.player ] and item.data[ m.player ].count then
       local count = 0
       if loc == "Inventory" then
         count = m.find_item_count_bag( 0, 4, item.name )
@@ -252,8 +422,9 @@ function GuildInventory.sync_count( loc )
         count = m.find_item_count_bag( -1, -1, item.name )
         count = count + m.find_item_count_bag( 5, 10, item.name )
       end
-      if count > 0 and count ~= item.count[ m.player ] then
-        item.count[ m.player ] = count
+
+      if count > 0 and count ~= item.data[ m.player ].count then
+        item.data[ m.player ].count = count
         table.insert( updated, item )
       end
     end
@@ -294,6 +465,34 @@ function GuildInventory.find_empty_slot()
   end
 
   return m.get_num_slots() + 1
+end
+
+---@param data RequestData
+function GuildInventory.add_request( data )
+  if m.find( data.id, m.db.requests, "id" ) then
+    return
+  end
+
+  table.insert( m.db.requests, data )
+end
+
+function GuildInventory.check_requests()
+  for _, request in (m.db.requests) do
+    if request.to == m.player and not request.read then
+      m.notify.new_request( request )
+    end
+  end
+end
+
+function GuildInventory.convert()
+  for _, item in m.db.inventory do
+    item.data = {}
+    for p, c in item.count do
+      item.data[ p ] = {}
+      item.data[ p ][ 'count' ] = c
+    end
+    item.count = nil
+  end
 end
 
 GuildInventory:init()

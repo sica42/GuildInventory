@@ -1,13 +1,20 @@
 ## Interface: 11200
 ## Title: GuildInventory
 ## Author: Sica
-## Version: 0.1
+## Version: 0.2
 ## Notes: Share items in an inventory available to everyone in your guild
 ## SavedVariablesPerCharacter: GuildInventoryDB
 
-GuildInventory.lua
-InventoryGui.lua
+libs\LibStub\LibStub.lua
+libs\Libs.xml
+
 SlashCommand.lua
 MessageHandler.lua
+Notifications.lua
 Utils.lua
-Bindings.xml
+FrameBuilder.lua
+GuiElements.lua
+InventoryGui.lua
+TradeskillRecipesGui.lua
+Enchants.lua
+GuildInventory.lua
