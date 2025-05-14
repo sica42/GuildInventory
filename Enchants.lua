@@ -683,6 +683,14 @@ GuildInventory.Enchants = {
 		[ "name" ] = "Enchant Bracer - Vampirism",
 		[ "icon" ] = "Interface\\Icons\\Spell_Holy_GreaterHeal",
 	},
+	[ 41758 ] = {
+		[ "name" ] = "Enchanted Gemstone Oil",
+		[ "icon" ] = "Interface\\Icons\\INV_Potion_14",
+	},
+	[ 45071 ] = {
+		[ "name" ] = "Enchant 2H Weapon - Minor Intellect",
+		[ "icon" ] = "Interface\\Icons\\Spell_Holy_GreaterHeal",
+	},
 }
 
 GuildInventory.Reagents = {

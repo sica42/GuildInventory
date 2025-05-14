@@ -317,11 +317,15 @@ function M.new( ace_timer, ace_serializer, ace_comm )
 					item_link = m.db.tradeskills[ tradeskill ][ v.id ].link
 				else
 					if tradeskill == "Enchanting" then
-						local name = m.Enchants[ v.id ].name
-						if not name then
-							m.error( string.format( "Unknown enchantment received (%d)", v.id ) )
+						if v and v.id then
+							local name = m.Enchants[ v.id ] and m.Enchants[ v.id ].name
+							if not name then
+								m.error( string.format( "Unknown enchantment received (%d)", v.id ) )
+							else
+								item_link = m.make_enchant_link( v.id, name )
+							end
 						else
-							item_link = m.make_enchant_link( v.id, name )
+							m.debug("empty data enchant data??")
 						end
 					else
 						local name, _, quality = GetItemInfo( v.id )
