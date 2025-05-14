@@ -86,7 +86,9 @@ function M.new( ace_timer )
     frame:Hide()
 
     frame:SetScript( "OnMouseDown", function()
-      m.gui.show( "Inbox" )
+      if frame.type == m.NotificationType.NewRequest then
+        m.gui.show( "Inbox" )
+      end
     end )
 
     local type_line = CreateFrame( "Frame", nil, frame )
@@ -107,10 +109,12 @@ function M.new( ace_timer )
     frame.is_used = true
     frame.fade = nil
     frame.aplha = 0
+    frame.type = nil
 
     ---@param data NotifyData
     frame.show = function( data )
       local ty = 80
+      frame.type = data.type
 
       for i = getn( notify_frames ), 1, -1 do
         if notify_frames[ i ].is_used then

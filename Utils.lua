@@ -67,6 +67,9 @@ M.TRADE_SKILL_LOCALIZATION = {
 		zhCN = "附魔",
 		zhTW = "附魔",
 	},
+	Jewelcrafting = {
+		enUS = "Jewelcrafting",
+	},
 }
 
 function M.build_reverse_trade_map( locale )
@@ -349,6 +352,21 @@ function M.count( t, field )
 	return count
 end
 
+---@param recipes table
+---@param player string
+---@return number
+function M.count_recipes( recipes, player )
+	local count = 0
+
+	for _, recipe in pairs( recipes ) do
+		if M.find( player, recipe.players ) then
+			count = count + 1
+		end
+	end
+
+	return count
+end
+
 ---@param t table
 ---@return number
 function M.count_count( t )
@@ -360,6 +378,16 @@ function M.count_count( t )
 	end
 
 	return count
+end
+
+---@param s string|string[]
+---@return string[]
+function M.to_string_list( s )
+	---@type string[]
+	local r
+
+	if type( s ) == "string" then r = { s } else r = s end
+	return r
 end
 
 ---@param str string

@@ -1255,6 +1255,7 @@ function M.new( frame_builder, ace_serializer, notify )
     end
 
     popup:Show()
+    refresh()
   end
 
   local function hide()

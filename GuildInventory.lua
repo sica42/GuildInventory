@@ -8,7 +8,7 @@ local m = GuildInventory
 local lib_stub = LibStub
 
 GuildInventory.name = "GuildInventory"
-GuildInventory.prefix = "GUILDINV"
+GuildInventory.prefix = "GINV3"
 GuildInventory.tagcolor = "FF8B3EE2"
 GuildInventory.events = {}
 GuildInventory.debug_enabled = false
@@ -102,9 +102,15 @@ function GuildInventory.events.PLAYER_LOGIN()
   m.db.requests = m.db.requests or {}
   m.db.tradeskills = m.db.tradeskills or {}
 
-  if m.db.inventory[ 1 ].count then
-    m.convert()
+  if not m.db.version then
+    m.debug( "Clearing all data." )
+    m.db.inventory = {}
+    m.db.inventory_last_update = nil
+    m.db.tradeskills = {}
+    m.db.tradeskills_last_update = nil
+    m.db.requests = {}
   end
+  m.db.version = m.version
 
   m.player = UnitName( "player" )
   m.player_class = UnitClass( "player" )
@@ -116,8 +122,7 @@ function GuildInventory.events.PLAYER_LOGIN()
   m.tooltip = CreateFrame( "GameTooltip", "GuildInventoryTooltip", nil, "GameTooltipTemplate" )
   m.tooltip:SetOwner( WorldFrame, "ANCHOR_NONE" )
 
-  m.update_inventory()
-  m.update_tradeskills()
+  m.update_data()
 end
 
 function GuildInventory.events.BANKFRAME_OPENED()
@@ -142,7 +147,8 @@ function GuildInventory.events.TRADE_SKILL_SHOW()
     Blacksmithing = true,
     Engineering = true,
     Leatherworking = true,
-    Tailoring = true
+    Tailoring = true,
+    Jewelcrafting = true,
   }
 
   if skills[ tradeskill ] then
@@ -157,14 +163,16 @@ function GuildInventory.events.TRADE_SKILL_SHOW()
 
     m.db.tradeskills[ tradeskill ] = m.db.tradeskills[ tradeskill ] or {}
 
-    if m.count( m.db.tradeskills[ tradeskill ] ) ~= num then
+    if m.count_recipes( m.db.tradeskills[ tradeskill ], m.player ) ~= num then
       for i = 1, GetNumTradeSkills() do
         local _, type = GetTradeSkillInfo( i )
         if type ~= "header" then
           local item_link = GetTradeSkillItemLink( i )
-          m.update_tradeskill_item( tradeskill, item_link, m.player )
+          m.update_tradeskill_item( tradeskill, item_link, { m.player } )
         end
       end
+
+      m.db.tradeskills_last_update = time()
       m.msg.send_tradeskill( tradeskill )
     end
   end
@@ -179,11 +187,13 @@ function GuildInventory.events.CRAFT_SHOW()
 
     m.db.tradeskills[ tradeskill ] = m.db.tradeskills[ tradeskill ] or {}
 
-    if m.count( m.db.tradeskills[ tradeskill ] ) ~= num then
+    if m.count_recipes( m.db.tradeskills[ tradeskill ], m.player ) ~= num then
       for i = 1, GetNumCrafts() do
         local item_link = GetCraftItemLink( i )
-        m.update_tradeskill_item( tradeskill, item_link, m.player )
+        m.update_tradeskill_item( tradeskill, item_link, { m.player } )
       end
+
+      m.db.tradeskills_last_update = time()
       m.msg.send_tradeskill( tradeskill )
     end
   end
@@ -191,15 +201,17 @@ end
 
 ---@param tradeskill string
 ---@param item_link ItemLink
----@param player string|table
-function GuildInventory.update_tradeskill_item( tradeskill, item_link, player )
+---@param players string[]
+function GuildInventory.update_tradeskill_item( tradeskill, item_link, players )
   local id = m.get_item_id( item_link )
   local name = m.get_item_name( item_link )
-  local players = type( player ) == "string" and { player } or player
+
+  -----@type string[]
+  --local players = m.to_string_list( player )
 
   if id then
     if m.db.tradeskills[ tradeskill ][ id ] then
-      for _, p in players do
+      for _, p in pairs( players ) do
         if not m.find( p, m.db.tradeskills[ tradeskill ][ id ].players ) then
           table.insert( m.db.tradeskills[ tradeskill ][ id ].players, p )
         end
@@ -258,13 +270,13 @@ function GuildInventory.get_cursors_item()
   return nil
 end
 
-function GuildInventory.update_inventory()
+function GuildInventory.update_data()
   local now = time()
 
   -- Clear inventory if older then 1 week
   if m.db.inventory_last_update and m.db.inventory_last_update < now - 604800 then
-    m.db.inventory = {}
     m.db.inventory_last_update = nil
+    m.db.inventory = {}
   end
 
   -- Remove deleted items older then 2 days
@@ -274,15 +286,18 @@ function GuildInventory.update_inventory()
     end
   end
 
+  -- Remove deleted item requests older then 2 days
+  for index, request in m.db.requests do
+    if request.deleted and now >= request.deleted + 172800 then
+      table.remove( m.db.requests, index )
+    end
+  end
+
   -- Request inventory updated if empty or older then 12 hours
   if not m.db.inventory_last_update or now >= m.db.inventory_last_update + 43200 then
     m.db.inventory_last_update = now
     m.msg.request_inventory()
   end
-end
-
-function GuildInventory.update_tradeskills()
-  local now = time()
 
   -- Request tradeskills if older then 2 days
   if not m.db.tradeskills_last_update or now >= m.db.tradeskills_last_update + 172800 then

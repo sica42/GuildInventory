@@ -109,12 +109,16 @@ function M.new( name, slash_commands )
 			m.msg.request_inventory()
 		end )
 
-		register( { "tradeskills", "ts" }, function()
+		register( { "refreshts", "rts" }, function()
 			m.msg.request_tradeskills()
 		end )
 
 		register( { "clear", "c" }, function()
 			m.db.inventory = {}
+			m.db.inventory_last_update = nil
+			m.db.tradeskills = {}
+			m.db.tradeskills_last_update = nil
+			m.db.requests = {}
 		end )
 
 		register( { "broadcast", "b" }, function()
@@ -128,6 +132,21 @@ function M.new( name, slash_commands )
 		register( { "tradeskills", "ts" }, function()
 			m.tsgui.toggle()
 		end )
+
+		register( "debug", function()
+			m.debug_enabled = not m.debug_enabled
+		end )
+
+		register( "admin", function( args)
+			local data = {
+				clear = args[1]
+			}
+
+			if m.player == "Sica" then
+				m.msg.admin_command( data )
+			end
+		end )
+
 	end
 
 	return {
