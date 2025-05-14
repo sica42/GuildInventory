@@ -181,10 +181,10 @@ function M.new( ace_timer, ace_serializer, ace_comm )
 		--m.debug("Send item request ID:" .. tostring(request_data.id) .. ", TO: " .. tostring(request_data.to))
 		--m.debug(tostring( m.guild_member_online( request_data.to ) ))
 		--if m.guild_member_online( request_data.to ) then
-			--m.debug( request_data.to .. " is online, delete itemrequest." )
-			--local _, index = m.find( request_data.id, m.db.requests, "id" )
-			--m.db.requests[ index ].deleted = time()
-			--table.remove( m.db.requests, index )
+		--m.debug( request_data.to .. " is online, delete itemrequest." )
+		--local _, index = m.find( request_data.id, m.db.requests, "id" )
+		--m.db.requests[ index ].deleted = time()
+		--table.remove( m.db.requests, index )
 		--end
 	end
 
@@ -342,7 +342,7 @@ function M.new( ace_timer, ace_serializer, ace_comm )
 				ilu = m.db.inventory_last_update,
 				tlu = m.db.tradeskills_last_update,
 			} )
-		elseif command == MessageCommand.Pong and pinging.inv or pinging.ts then
+		elseif command == MessageCommand.Pong and (pinging.inv or pinging.ts) then
 			--
 			-- Receive pong
 			--
