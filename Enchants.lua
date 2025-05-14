@@ -704,6 +704,7 @@ GuildInventory.Reagents = {
 	[ "Greater Nether Essence" ]  = 11175,
 	[ "Lesser Eternal Essence" ]  = 16202,
 	[ "Greater Eternal Essence" ] = 16203,
+	[ "Living Essence" ]          = 12803,
 
 	-- Shards
 	[ "Small Glimmering Shard" ]  = 10978,
@@ -729,18 +730,36 @@ GuildInventory.Reagents = {
 	[ "Runed Truesilver Rod" ]    = 11145,
 	[ "Runed Arcanite Rod" ]      = 16207,
 
+	[ "Imbued Vial" ]             = 18256,
+	[ "Crystal Vial" ]            = 3371,
+	[ "Leaded Vial" ]             = 3372,
+
 	-- Misc
-	[ "Simple Wood" ]             = 4470,
 	[ "Star Ruby" ]               = 7910,
 	[ "Large Opal" ]              = 12799,
 	[ "Azerothian Diamond" ]      = 12800,
 	[ "Blue Sapphire" ]           = 12361,
-	[ "Golden Pearl" ]            = 13926,
 	[ "Righteous Orb" ]           = 12811,
 	[ "Arcane Crystal" ]          = 12363,
+	[ "Shadowgem" ]               = 1210,
+
+	[ "Purple Lotus" ]            = 8831,
+	[ "Wildvine" ]                = 8153,
+	[ "Firebloom" ]               = 4625,
+
+	[ "Blood of the Mountain" ]   = 11382,
+	[ "Elemental Fire" ]          = 7068,
+	[ "Essence of Fire" ]         = 7077,
+	[ "Large Fang" ]              = 5637,
+	[ "Thorium Bar" ]             = 12359,
+	[ "Star Wood" ]               = 11291,
+	[ "Simple Wood" ]             = 4470,
+	[ "Stranglethorn Seed" ]      = 44614,
+	[ "Maple Seed" ]              = 17034,
 
 	-- Pearls
-	[ "Black Pearl" ]             = 7971,
-	[ "Iridescent Pearl" ]        = 5500,
-	[ "Small Lustrous Pearl" ]    = 5498,
+	[ "Black Pearl" ]          = 7971,
+	[ "Golden Pearl" ]         = 13926,
+	[ "Iridescent Pearl" ]     = 5500,
+	[ "Small Lustrous Pearl" ] = 5498,
 }

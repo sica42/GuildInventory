@@ -242,6 +242,23 @@ function M.new( ace_timer, ace_serializer, ace_comm )
 		broadcast( MessageCommand.Admin, data )
 	end
 
+	local function get_item_info( tradeskill, id, players )
+		local name, _, quality = GetItemInfo( id )
+		local item_link
+
+		if tradeskill == "Enchanting" then
+			item_link = m.make_enchant_link( id, name )
+		else
+			item_link = m.make_item_link( id, name, quality )
+		end
+
+		if item_link then
+			m.update_tradeskill_item( tradeskill, item_link, players )
+		else
+			m.debug("still error for " .. id)
+		end
+	end
+
 	---@param command string
 	---@param data table
 	---@param sender string
@@ -308,7 +325,14 @@ function M.new( ace_timer, ace_serializer, ace_comm )
 						end
 					else
 						local name, _, quality = GetItemInfo( v.id )
-						item_link = m.make_item_link( v.id, name, quality )
+						--m.debug( string.format( "Updating item (%d) %s", v.id, tostring(name )) )
+						if name and quality then
+							item_link = m.make_item_link( v.id, name, quality )
+						else
+							m.debug( "Unable to find " .. tostring(v.id) )
+							m.tooltip:SetHyperlink( "item:" .. v.id )
+							ace_timer.ScheduleTimer( M, get_item_info, 1, tradeskill, v.id, v.players )
+						end
 					end
 				end
 

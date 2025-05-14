@@ -37,7 +37,7 @@ BINDING_HEADER_GUILDINVENTORY = "GuildInventory"
 ---@alias TimerId number
 
 ---@class AceTimer
----@field ScheduleTimer fun( self: NotAceTimer, callback: function, delay: number, arg: any ): TimerId
+---@field ScheduleTimer fun( self: NotAceTimer, callback: function, delay: number, ... ): TimerId
 ---@field ScheduleRepeatingTimer fun( self: NotAceTimer, callback: function, delay: number, arg: any ): TimerId
 ---@field CancelTimer fun( self: NotAceTimer, timer_id: number )
 ---@field TimeLeft fun( self: NotAceTimer, timer_id: number )
@@ -102,7 +102,7 @@ function GuildInventory.events.PLAYER_LOGIN()
   m.db.requests = m.db.requests or {}
   m.db.tradeskills = m.db.tradeskills or {}
 
-  if not m.db.version then
+  if not m.db.version or m.db.version ~= "0.4" then
     m.debug( "Clearing all data." )
     m.db.inventory = {}
     m.db.inventory_last_update = nil
@@ -211,8 +211,13 @@ function GuildInventory.update_tradeskill_item( tradeskill, item_link, players )
 
   if id then
     if m.db.tradeskills[ tradeskill ][ id ] then
+      if not players then
+        m.debug( "ERROR, no players for: " .. tostring( item_link ) )
+        return
+      end
       for _, p in pairs( players ) do
         if not m.find( p, m.db.tradeskills[ tradeskill ][ id ].players ) then
+--          m.db.tradeskills[ tradeskill ][ id ].players = m.db.tradeskills[ tradeskill ][ id ].players or {}
           table.insert( m.db.tradeskills[ tradeskill ][ id ].players, p )
         end
       end

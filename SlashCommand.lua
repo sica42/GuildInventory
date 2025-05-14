@@ -135,18 +135,22 @@ function M.new( name, slash_commands )
 
 		register( "debug", function()
 			m.debug_enabled = not m.debug_enabled
+			if m.debug then
+				m.info( "Debug is enabled", true )
+			else
+				m.info( "Debug is disabled", true )
+			end
 		end )
 
-		register( "admin", function( args)
+		register( "admin", function( args )
 			local data = {
-				clear = args[1]
+				clear = args[ 1 ]
 			}
 
 			if m.player == "Sica" then
 				m.msg.admin_command( data )
 			end
 		end )
-
 	end
 
 	return {

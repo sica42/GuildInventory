@@ -357,9 +357,13 @@ function M.new()
               line = string.gsub( line, "Reagents: ", "" )
               for reagent in string.gmatch( line, "([^,]+)" ) do
                 local name, count = string.match( reagent, "^%s?(.-)%s*%((%d+)%)" )
+                local texture
                 name = m.clean_string( name and name or reagent )
-
-                local _, _, _, _, _, _, _, _, texture = GetItemInfo( m.Reagents[ name ] )
+                if m.Reagents[ name ] then
+                  _, _, _, _, _, _, _, _, texture = GetItemInfo( m.Reagents[ name ] )
+                else
+                  texture = "Interface\\Icons\\INV_Misc_QuestionMark"
+                end
 
                 table.insert( reagents, {
                   id = m.Reagents[ name ],
