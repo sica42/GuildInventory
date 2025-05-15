@@ -8,7 +8,7 @@ local m = GuildInventory
 local lib_stub = LibStub
 
 GuildInventory.name = "GuildInventory"
-GuildInventory.prefix = "GINV3"
+GuildInventory.prefix = "GINV6"
 GuildInventory.tagcolor = "FF8B3EE2"
 GuildInventory.events = {}
 GuildInventory.debug_enabled = false
@@ -102,7 +102,7 @@ function GuildInventory.events.PLAYER_LOGIN()
   m.db.requests = m.db.requests or {}
   m.db.tradeskills = m.db.tradeskills or {}
 
-  if not m.db.version or m.db.version ~= "0.4" then
+  if not m.db.version or m.db.version ~= "0.6" then
     m.debug( "Clearing all data." )
     m.db.inventory = {}
     m.db.inventory_last_update = nil
@@ -205,9 +205,6 @@ end
 function GuildInventory.update_tradeskill_item( tradeskill, item_link, players )
   local id = m.get_item_id( item_link )
   local name = m.get_item_name( item_link )
-
-  -----@type string[]
-  --local players = m.to_string_list( player )
 
   if id then
     if m.db.tradeskills[ tradeskill ][ id ] then

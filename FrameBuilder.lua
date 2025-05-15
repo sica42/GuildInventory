@@ -73,7 +73,7 @@ function M.new()
 				end
 			end
 
-			local title_label = frame:CreateFontString( nil, "ARTWORK", "GameFontNormal" )
+			local title_label = frame:CreateFontString( nil, "ARTWORK", "GIFontNormal" )
 			title_label:SetPoint( "TopLeft", frame, "TopLeft", 6, -3 )
 			title_label:SetTextColor( 1, 1, 1 )
 			title_label:SetJustifyH( "Left" )

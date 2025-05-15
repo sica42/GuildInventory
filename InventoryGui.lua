@@ -81,10 +81,10 @@ function M.new( frame_builder, ace_serializer, notify )
 
   local function sort_inventory()
     for _, item in ipairs( m.db.inventory ) do
-      if not item.type then
+      if not item.type or item.type == "" then
         local _, _, _, _, _, type, sub_type = GetItemInfo( item.id )
-        item.type = type
-        item.sub_type = sub_type
+        item.type = type or ""
+        item.sub_type = sub_type or 0
       end
     end
 
@@ -217,7 +217,7 @@ function M.new( frame_builder, ace_serializer, notify )
     } )
     tab:SetBackdropColor( 0, 0, 0, 0.7 )
 
-    local text = tab:CreateFontString( nil, "ARTWORK", "GameFontNormal" )
+    local text = tab:CreateFontString( nil, "ARTWORK", "GIFontNormal" )
     text:SetPoint( "Center", tab, "Center", 0, 1 )
     text:SetText( title )
 
@@ -393,14 +393,14 @@ function M.new( frame_builder, ace_serializer, notify )
         :backdrop_color( 0, 0, 0, 0.7 )
         :build()
 
-    local btn_sync_inv = m.GuiElements.create_button( info, "Sync inventory items count", 150, function()
+    local btn_sync_inv = m.GuiElements.create_button( info, "Sync inventory items count", 160, function()
       if m.sync_count( "Inventory" ) then
         refresh()
       end
     end, clear_cursor )
     btn_sync_inv:SetPoint( "Center", info, "Center", 0, 15 )
 
-    local btn_sync_bank = m.GuiElements.create_button( info, "Sync bank items count", 150, function()
+    local btn_sync_bank = m.GuiElements.create_button( info, "Sync bank items count", 160, function()
       if m.sync_count( "Bank" ) then
         refresh()
       end
@@ -473,14 +473,14 @@ function M.new( frame_builder, ace_serializer, notify )
     input_price:SetScript( "OnReceiveDrag", clear_cursor )
     info.input_price = input_price
 
-    local label_price = info:CreateFontString( nil, "ARTWORK", "GameFontNormalSmall" )
+    local label_price = info:CreateFontString( nil, "ARTWORK", "GIFontNormalSmall" )
     label_price:SetPoint( "BottomLeft", input_price, "TopLeft", -5, 1 )
     label_price:SetTextColor( 1, 1, 1 )
     label_price:SetJustifyH( "Left" )
     label_price:SetText( "Your price per item" )
     label_price:Hide()
 
-    local label_gcount = info:CreateFontString( nil, "ARTWORK", "GameFontNormalSmall" )
+    local label_gcount = info:CreateFontString( nil, "ARTWORK", "GIFontNormalSmall" )
     label_gcount:SetPoint( "TopLeft", text_item, "BottomLeft", 0, -5 )
     label_gcount:SetPoint( "Right", label_count, "TopLeft", -10, 0 )
     label_gcount:SetTextColor( 1, 1, 1 )
@@ -488,7 +488,7 @@ function M.new( frame_builder, ace_serializer, notify )
     label_gcount:SetText( "Guild members amount" )
     label_gcount:Hide()
 
-    local text_gcount = info:CreateFontString( nil, "ARTWORK", "GameFontNormalSmall" )
+    local text_gcount = info:CreateFontString( nil, "ARTWORK", "GIFontNormalSmall" )
     text_gcount:SetPoint( "TopLeft", label_gcount, "BottomLeft", 0, -5 )
     text_gcount:SetPoint( "Right", label_count, "Left", -5, 0 )
     text_gcount:SetPoint( "Bottom", info, "Bottom", 0, 8 )
@@ -662,7 +662,7 @@ function M.new( frame_builder, ace_serializer, notify )
     label_info:SetPoint( "Center", border_items, "Center", 0, 0 )
     label_info:SetText( "Drag items here to add" )
 
-    local label_items = frame:CreateFontString( nil, "ARTWORK", "GameFontNormalSmall" )
+    local label_items = frame:CreateFontString( nil, "ARTWORK", "GIFontNormalSmall" )
     label_items:SetPoint( "BottomLeft", border_items, "TopLeft", 0, 2 )
     label_items:SetTextColor( 1, 1, 1 )
     label_items:SetJustifyH( "Left" )
@@ -735,7 +735,7 @@ function M.new( frame_builder, ace_serializer, notify )
 
     frame_message:SetScrollChild( input_message )
 
-    local label_message = frame:CreateFontString( nil, "ARTWORK", "GameFontNormalSmall" )
+    local label_message = frame:CreateFontString( nil, "ARTWORK", "GIFontNormalSmall" )
     label_message:SetPoint( "BottomLeft", border_message, "TopLeft", 0, 2 )
     label_message:SetTextColor( 1, 1, 1 )
     label_message:SetJustifyH( "Left" )
@@ -1012,7 +1012,7 @@ function M.new( frame_builder, ace_serializer, notify )
       end )
     end
 
-    local label_search = frame:CreateFontString( nil, "ARTWORK", "GameFontNormal" )
+    local label_search = frame:CreateFontString( nil, "ARTWORK", "GIFontNormal" )
     label_search:SetPoint( "TopLeft", frame, "TopLeft", 12, -35 )
     label_search:SetTextColor( 1, 1, 1 )
     label_search:SetJustifyH( "Left" )
@@ -1020,7 +1020,7 @@ function M.new( frame_builder, ace_serializer, notify )
 
     local input_search = CreateFrame( "EditBox", "GuildInventoryInputSearch", frame, "InputBoxTemplate" )
     frame.search = input_search
-    input_search:SetPoint( "TopLeft", frame, "TopLeft", 50, -29 )
+    input_search:SetPoint( "TopLeft", frame, "TopLeft", 60, -29 )
     input_search:SetWidth( 130 )
     input_search:SetHeight( 22 )
     input_search:SetAutoFocus( false )
@@ -1058,7 +1058,7 @@ function M.new( frame_builder, ace_serializer, notify )
     local btn_sort = m.GuiElements.create_button( frame, "Sort", 60, sort_inventory, clear_cursor )
     btn_sort:SetPoint( "TopLeft", btn_search, "TopRight", 5, 0 )
 
-    frame.btn_request = m.GuiElements.create_button( frame, "Request >>", 70, function()
+    frame.btn_request = m.GuiElements.create_button( frame, "Request >>", 80, function()
       if request_frame:IsVisible() or inbox_frame:IsVisible() then
         this:SetText( "Request >>" )
         frame.tab_request:Hide()

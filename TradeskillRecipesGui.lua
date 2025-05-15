@@ -110,6 +110,7 @@ function M.new()
   end
 
   local function show_recipe( item )
+
     if item.skill == "Enchanting" then
       popup.info.set( item )
       return
@@ -138,15 +139,19 @@ function M.new()
         :width( 382 )
         :height( 16 )
         :frame_style( "NONE" )
-        --:backdrop( { bgFile = "Interface/Buttons/WHITE8x8" } )
-        --:backdrop_color( 0.7, 0.3, 0.5, 0.7 )
-        --   :hidden()
         :build()
 
     frame.slot_index = index
+    frame:SetHighlightTexture( "Interface\\QuestFrame\\UI-QuestTitleHighlight" )
     frame:SetScript( "OnMouseUp", function()
       show_recipe( frame.item )
     end )
+
+		--local selected_tex = frame:CreateTexture( nil, "BACKGROUND" )
+    --selected_tex:SetTexture( "Interface\\QuestFrame\\UI-QuestLogTitleHighlight" )
+    --selected_tex:SetAllPoints( frame )
+    --selected_tex:SetVertexColor( 0.3, 0.3, 1, 1 )
+    --selected_tex:Hide()
 
     ---@type Button
     local text_item = m.GuiElements.create_text_in_container( frame, nil, "Button" )
@@ -178,8 +183,8 @@ function M.new()
       show_recipe( frame.item )
     end )
 
-    local text_players = frame:CreateFontString( nil, "ARTWORK", "GameFontNormal" )
-    text_players:SetPoint( "Right", frame, "Right", -5, -1 )
+    local text_players = frame:CreateFontString( nil, "ARTWORK", "GIFontNormalSmall" )
+    text_players:SetPoint( "Right", frame, "Right", -5, 0 )
     text_players:SetHeight( 16 )
     text_players:SetTextColor( 1, 1, 1, 1 )
     text_players:SetJustifyH( "Right" )
@@ -260,21 +265,21 @@ function M.new()
     icon:SetWidth( 32 )
     icon:SetHeight( 32 )
 
-    local text_name = info:CreateFontString( nil, "ARTWORK", "GameFontNormal" )
+    local text_name = info:CreateFontString( nil, "ARTWORK", "GIFontNormal" )
     text_name:SetPoint( "TopLeft", info, "TopLeft", 45, -5 )
     text_name:SetJustifyH( "Left" )
 
-    local text_stats = info:CreateFontString( nil, "ARTWORK", "GameFontHighlightSmall" )
+    local text_stats = info:CreateFontString( nil, "ARTWORK", "GIFontHighlightSmall" )
     text_stats:SetPoint( "TopLeft", text_name, "BottomLeft", 0, 0 )
     text_stats:SetJustifyH( "Left" )
 
-    local text_info = info:CreateFontString( nil, "ARTWORK", "GameFontHighlightSmall" )
+    local text_info = info:CreateFontString( nil, "ARTWORK", "GIFontHighlightSmall" )
     text_info:SetPoint( "TopLeft", text_stats, "BottomLeft", 0, 0 )
     text_info:SetWidth( 330 )
     text_info:SetJustifyH( "Left" )
     text_info:SetTextColor( 0, 1, 0, 1 )
 
-    local label_reagents = frame:CreateFontString( nil, "ARTWORK", "GameFontHighlightSmall" )
+    local label_reagents = frame:CreateFontString( nil, "ARTWORK", "GIFontHighlightSmall" )
     label_reagents:SetPoint( "Top", text_info, "Bottom", 0, -10 )
     label_reagents:SetPoint( "Left", info, "Left", 5, 0 )
     label_reagents:SetText( "Reagents:" )
@@ -314,6 +319,16 @@ function M.new()
 
       reagent.reagent_id = reagent_id
 
+      if not reagent_texture or not reagent_name then
+        m.get_item_info( reagent_id, function( item_info )
+          f_name:SetText( item_info.name )
+          SetItemButtonTexture( reagent, item_info.texture )
+        end )
+      else
+        f_name:SetText( reagent_name )
+        SetItemButtonTexture( reagent, reagent_texture )
+      end
+
       if (player_reagent_count < reagent_count) then
         SetItemButtonTextureVertexColor( reagent, GRAY_FONT_COLOR.r, GRAY_FONT_COLOR.g, GRAY_FONT_COLOR.b );
         f_name:SetTextColor( GRAY_FONT_COLOR.r, GRAY_FONT_COLOR.g, GRAY_FONT_COLOR.b );
@@ -322,9 +337,7 @@ function M.new()
         f_name:SetTextColor( HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b );
       end
 
-      f_name:SetText( reagent_name )
       f_count:SetText( player_reagent_count .. " /" .. reagent_count )
-      SetItemButtonTexture( reagent, reagent_texture )
       reagent:Show()
     end
 
@@ -340,97 +353,98 @@ function M.new()
       if recipe.skill == "Enchanting" then
         icon:SetTexture( m.Enchants[ recipe.id ].icon )
 
-        m.tooltip:ClearLines()
-        m.tooltip:SetHyperlink( m.get_enchant_string( recipe ) )
-        m.tooltip:Show()
+        m.scan_tooltip( m.get_enchant_string( recipe ), function( lines )
+          local stats = ""
+          local desc = ""
+          local reagents = {}
 
-        local num_lines = m.tooltip:NumLines()
-        local stats = ""
-        local desc = ""
-        local reagents = {}
+          if lines then
+            for i, line in ipairs( lines ) do
+              if i > 1 then
+                if string.find( line, "Reagents:" ) then
+                  line = string.gsub( line, "Reagents: ", "" )
+                  for reagent in string.gmatch( line, "([^,]+)" ) do
+                    local name, count = string.match( reagent, "^%s?(.-)%s*%((%d+)%)" )
+                    local texture
+                    name = m.clean_string( name and name or reagent )
+                    if m.Reagents[ name ] then
+                      _, _, _, _, _, _, _, _, texture = GetItemInfo( m.Reagents[ name ] )
+                    else
+                      texture = "Interface\\Icons\\INV_Misc_QuestionMark"
+                    end
 
-        for i = 1, num_lines do
-          local line = _G[ "GuildInventoryTooltipTextLeft" .. i ]:GetText()
-
-          if i > 1 then
-            if string.find( line, "Reagents:" ) then
-              line = string.gsub( line, "Reagents: ", "" )
-              for reagent in string.gmatch( line, "([^,]+)" ) do
-                local name, count = string.match( reagent, "^%s?(.-)%s*%((%d+)%)" )
-                local texture
-                name = m.clean_string( name and name or reagent )
-                if m.Reagents[ name ] then
-                  _, _, _, _, _, _, _, _, texture = GetItemInfo( m.Reagents[ name ] )
+                    table.insert( reagents, {
+                      id = m.Reagents[ name ],
+                      name = name,
+                      count = tonumber( count ) or 1,
+                      icon = texture
+                    } )
+                  end
                 else
-                  texture = "Interface\\Icons\\INV_Misc_QuestionMark"
+                  if getn( reagents ) > 0 then
+                    desc = desc .. line .. "\n"
+                  else
+                    stats = stats .. line .. "\n"
+                  end
                 end
-
-                table.insert( reagents, {
-                  id = m.Reagents[ name ],
-                  name = name,
-                  count = tonumber( count ) or 1,
-                  icon = texture
-                } )
-              end
-            else
-              if getn( reagents ) > 0 then
-                desc = desc .. line .. "\n"
-              else
-                stats = stats .. line .. "\n"
               end
             end
+          else
+            m.debug( "Unable to parse tooltip" )
           end
-        end
 
-        text_name:SetText( recipe.name )
-        text_stats:SetText( stats ~= "" and stats or "\n\n" )
-        text_info:SetText( desc )
-        label_reagents:SetText( "Reagents:" )
+          text_name:SetText( recipe.name )
+          text_stats:SetText( stats ~= "" and stats or "\n\n" )
+          text_info:SetText( desc )
+          label_reagents:SetText( "Reagents:" )
 
-        for i, reagent_data in pairs( reagents ) do
-          set_reagent( i, reagent_data.id, reagent_data.name, reagent_data.icon, reagent_data.count )
-        end
+          for i, reagent_data in pairs( reagents ) do
+            set_reagent( i, reagent_data.id, reagent_data.name, reagent_data.icon, reagent_data.count )
+          end
+        end )
       else
-        local name, _, quality, _, _, _, _, _, texture = GetItemInfo( recipe.craftItem )
-        local item = {
-          name = name,
-          id = recipe.craftItem,
-          quality = quality,
-          icon = texture,
-          data = {}
-        }
+        m.get_item_info( recipe.craftItem, function( item_info )
+          --local name, _, quality, _, _, _, _, _, texture = GetItemInfo( recipe.craftItem )
+          local item = {
+            name = item_info.name,
+            id = recipe.craftItem,
+            quality = item_info.quality,
+            icon = item_info.texture,
+            data = {}
+          }
 
-        m.tooltip:ClearLines()
-        m.tooltip:SetHyperlink( m.get_item_string( item.id ) )
-        m.tooltip:Show()
+          m.tooltip:ClearLines()
+          m.tooltip:SetHyperlink( "item:" .. item.id )
+          m.tooltip:Show()
 
-        local num_lines = m.tooltip:NumLines()
-        local stats = ""
-        local desc = ""
-        for i = 1, num_lines do
-          local line = _G[ "GuildInventoryTooltipTextLeft" .. i ]:GetText()
-          if string.find( line, "^%s*$" ) then
-            break
+          local num_lines = m.tooltip:NumLines()
+          local stats = ""
+          local desc = ""
+          for i = 1, num_lines do
+            local line = _G[ "GuildInventoryTooltipTextLeft" .. i ]:GetText()
+            if string.find( line, "^%s*$" ) then
+              break
+            end
+            if string.find( line, "Use:" ) or string.find( line, "Equip:" ) then
+              desc = desc .. line .. "\n"
+            elseif i > 1 and desc == "" then
+              stats = stats .. line .. "\n"
+            end
           end
-          if string.find( line, "Use:" ) or string.find( line, "Equip:" ) then
-            desc = desc .. line .. "\n"
-          elseif i > 1 and desc == "" then
-            stats = stats .. line .. "\n"
+
+          icon:SetTexture( item.icon )
+          text_name:SetText( m.get_item_name_colorized( item ) )
+          text_stats:SetText( stats ~= "" and stats or "\n\n" )
+          text_info:SetText( desc )
+          label_reagents:SetText( "Reagents:" )
+
+          for i, reagent_data in recipe.reagents do
+            local reagent_count = reagent_data[ 2 ] or 1
+            local reagent_name, _, _, _, _, _, _, _, reagent_texture = GetItemInfo( reagent_data[ 1 ] )
+
+            set_reagent( i, reagent_data[ 1 ], reagent_name, reagent_texture, reagent_count )
           end
-        end
-
-        icon:SetTexture( item.icon )
-        text_name:SetText( m.get_item_name_colorized( item ) )
-        text_stats:SetText( stats ~= "" and stats or "\n\n" )
-        text_info:SetText( desc )
-        label_reagents:SetText( "Reagents:" )
-
-        for i, reagent_data in recipe.reagents do
-          local reagent_count = reagent_data[ 2 ] or 1
-          local reagent_name, _, _, _, _, _, _, _, reagent_texture = GetItemInfo( reagent_data[ 1 ] )
-
-          set_reagent( i, reagent_data[ 1 ], reagent_name, reagent_texture, reagent_count )
-        end
+        end )
       end
 
       scroll_frame:UpdateScrollChildRect()
@@ -468,7 +482,7 @@ function M.new()
       m.gui.toggle()
     end )
 
-    local label_search = frame:CreateFontString( nil, "ARTWORK", "GameFontNormal" )
+    local label_search = frame:CreateFontString( nil, "ARTWORK", "GIFontNormal" )
     label_search:SetPoint( "TopLeft", frame, "TopLeft", 12, -35 )
     label_search:SetTextColor( 1, 1, 1 )
     label_search:SetJustifyH( "Left" )
@@ -476,8 +490,8 @@ function M.new()
 
     local input_search = CreateFrame( "EditBox", "GuildTradeskillsInputSearch", frame, "InputBoxTemplate" )
     frame.search = input_search
-    input_search:SetPoint( "TopLeft", frame, "TopLeft", 50, -29 )
-    input_search:SetWidth( 190 )
+    input_search:SetPoint( "TopLeft", frame, "TopLeft", 60, -29 )
+    input_search:SetWidth( 180 )
     input_search:SetHeight( 22 )
     input_search:SetAutoFocus( false )
     input_search:SetScript( "OnEscapePressed", function()

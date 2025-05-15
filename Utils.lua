@@ -380,6 +380,153 @@ function M.count_count( t )
 	return count
 end
 
+---@param id integer
+---@param ufunc function
+---@return nil
+function M.get_item_info( id, ufunc )
+	local function callback( item_id, cbfunc )
+		local data = { GetItemInfo( item_id ) }
+		cbfunc( {
+			name = data[ 1 ],
+			link = data[ 2 ],
+			quality = data[ 3 ],
+			texture = data[ 9 ]
+		} )
+	end
+
+	if GetItemInfo( id ) then
+		callback( id, ufunc )
+		return
+	end
+
+	if not M.item_info_frame then
+		M.item_info_frame = CreateFrame( "Frame" )
+	end
+
+	if not M.get_item_info_items then
+		M.get_item_info_items = {}
+	end
+
+	table.insert( M.get_item_info_items, {
+		id = id,
+		ufunc = ufunc
+	} )
+
+	if not M.item_info_frame:GetScript( "OnUpdate" ) then
+		M.item_info_frame:SetScript( "OnUpdate", function()
+			local item_data = M.get_item_info_items[ 1 ]
+			if not item_data then
+				M.item_info_frame:SetScript( "OnUpdate", nil )
+				return
+			end
+
+			M.tooltip:SetOwner( WorldFrame, "ANCHOR_NONE" )
+			M.tooltip:SetHyperlink( "item:" .. item_data.id )
+
+			if GetItemInfo( item_data.id ) then
+				callback( item_data.id, item_data.ufunc )
+				table.remove( M.get_item_info_items, 1 )
+			end
+		end )
+	end
+end
+
+---@param link string -- item link or spell link
+---@param callback function -- function(lines: string[]|nil) end
+---@param max_attempts number|nil -- retry limit (default 5)
+---@param delay number|nil
+function M.scan_tooltip( link, callback, max_attempts, delay )
+	---@class TooltipScan
+	---@field link string
+	---@field callback fun(lines: string[]|nil)
+	---@field max_attempts number
+	---@field delay number
+	---@field attempt number
+	---@field elapsed number
+	---@field initialized boolean
+
+	---@type TooltipScan | nil
+	local current_scan = nil
+	local scan_queue = {}
+	local start_next_scan
+
+	local function process_scan()
+		if not current_scan then
+			M.tooltip_scan_frame:SetScript( "OnUpdate", nil )
+			return
+		end
+
+		current_scan.elapsed = current_scan.elapsed + arg1
+		if current_scan.elapsed < current_scan.delay then return end
+
+		current_scan.elapsed = 0
+		current_scan.attempt = current_scan.attempt + 1
+
+		M.tooltip:SetOwner( WorldFrame, "ANCHOR_NONE" )
+		M.tooltip:ClearLines()
+		M.tooltip:SetHyperlink( current_scan.link )
+
+	--	if not current_scan.initialized then
+			--current_scan.initialized = true
+			--return
+		--end
+
+		local num_lines = M.tooltip:NumLines()
+		if num_lines and num_lines > 0 then
+			local lines = {}
+			for i = 1, num_lines do
+				local line = getglobal( "GuildInventoryTooltipTextLeft" .. i )
+				if line then
+					table.insert( lines, line:GetText() or "" )
+				end
+			end
+
+			local scan_callback = current_scan.callback
+			current_scan = nil
+			M.tooltip_scan_frame:SetScript( "OnUpdate", nil )
+			scan_callback( lines )
+			start_next_scan()
+			return
+		end
+
+		if current_scan.attempt >= current_scan.max_attempts then
+			local scan_callback = current_scan.callback
+			current_scan = nil
+			M.tooltip_scan_frame:SetScript( "OnUpdate", nil )
+			scan_callback( nil )
+			start_next_scan()
+		end
+	end
+
+	function start_next_scan()
+		current_scan = table.remove( scan_queue, 1 )
+
+		if not current_scan then
+			M.tooltip:SetScript( "OnUpdate", nil )
+			return
+		end
+
+		current_scan.attempt = 0
+		current_scan.elapsed = 0
+		M.tooltip_scan_frame:SetScript( "OnUpdate", process_scan )
+	end
+
+	if not M.tooltip_scan_frame then
+		M.tooltip_scan_frame = CreateFrame( "Frame" )
+	end
+
+	table.insert( scan_queue, {
+		link = link,
+		callback = callback,
+		max_attempts = max_attempts or 5,
+		delay = delay or 0.1,
+	} )
+
+	if not current_scan then
+		start_next_scan()
+	end
+end
+
 ---@param s string|string[]
 ---@return string[]
 function M.to_string_list( s )
@@ -441,5 +588,12 @@ end
 
 ---@diagnostic disable-next-line: undefined-field
 if not string.gmatch then string.gmatch = string.gfind end
+
+string.match = string.match or function( str, pattern )
+	if not str then return nil end
+
+	local _, _, r1, r2, r3, r4, r5, r6, r7, r8, r9 = string.find( str, pattern )
+	return r1, r2, r3, r4, r5, r6, r7, r8, r9
+end
 
 return M

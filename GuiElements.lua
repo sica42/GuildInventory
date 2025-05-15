@@ -11,11 +11,21 @@ if m.GuiElements then return end
 local M = {}
 
 
+M.font_normal = CreateFont( "GIFontNormal" )
+M.font_normal:SetFont( "Interface\\AddOns\\GuildInventory\\assets\\Myriad-Pro.ttf", 12, "" )
+
+M.font_normal_small = CreateFont( "GIFontNormalSmall" )
+M.font_normal_small:SetFont( "Interface\\AddOns\\GuildInventory\\assets\\Myriad-Pro.ttf", 11, "" )
+
+M.font_highlight_small = CreateFont( "GIFontHighlightSmall" )
+M.font_highlight_small:SetFont( "Interface\\AddOns\\GuildInventory\\assets\\Myriad-Pro.ttf", 11, "" )
+M.font_highlight_small:SetTextColor( HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b )
+
 function M.create_text_in_container( parent, text, type, font_type )
 	---@class TextFrame: Frame
 	local frame = CreateFrame( type or "Frame", nil, parent )
 
-	local label = frame:CreateFontString( nil, "ARTWORK", font_type or "GameFontNormalSmall" )
+	local label = frame:CreateFontString( nil, "ARTWORK", font_type or "GIFontNormal" )
 	label:SetPoint( "Left", frame, "Left", 0, 0 )
 	label:SetJustifyH( "Left" )
 
@@ -117,6 +127,8 @@ function M.create_button( parent, title, width, on_click, on_receive_drag )
 	local btn = CreateFrame( "Button", nil, parent, title == "Cancel" and nil or "UIPanelButtonTemplate" )
 	btn:SetScript( "OnClick", on_click )
 	btn:SetScript( "OnReceiveDrag", on_receive_drag )
+	btn:SetTextFontObject( GIFontNormalSmall )
+	btn:SetHighlightFontObject( GIFontHighlightSmall )
 
 	if title == "Cancel" then
 		btn:SetNormalTexture( "Interface\\Buttons\\CancelButton-Up" )

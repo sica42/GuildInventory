@@ -135,7 +135,7 @@ function M.new( name, slash_commands )
 
 		register( "debug", function()
 			m.debug_enabled = not m.debug_enabled
-			if m.debug then
+			if m.debug_enabled then
 				m.info( "Debug is enabled", true )
 			else
 				m.info( "Debug is disabled", true )
