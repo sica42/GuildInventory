@@ -23,6 +23,7 @@ BINDING_HEADER_GUILDINVENTORY = "GuildInventory"
 ---@field id integer
 ---@field name string
 ---@field icon string
+---@field link string?
 ---@field quality integer
 ---@field deleted integer?
 ---@field data table<string, ItemData>
@@ -101,8 +102,11 @@ function GuildInventory.events.PLAYER_LOGIN()
   m.db.inventory = m.db.inventory or {}
   m.db.requests = m.db.requests or {}
   m.db.tradeskills = m.db.tradeskills or {}
+  m.db.frame_inventory = m.db.frame_inventory or {}
+  m.db.frame_tradeskills = m.db.frame_tradeskills or {}
 
-  if not m.db.version or m.db.version ~= "0.6" then
+
+  if not m.db.version or tonumber(m.db.version) < 0.6 then
     m.debug( "Clearing all data." )
     m.db.inventory = {}
     m.db.inventory_last_update = nil
@@ -214,7 +218,7 @@ function GuildInventory.update_tradeskill_item( tradeskill, item_link, players )
       end
       for _, p in pairs( players ) do
         if not m.find( p, m.db.tradeskills[ tradeskill ][ id ].players ) then
---          m.db.tradeskills[ tradeskill ][ id ].players = m.db.tradeskills[ tradeskill ][ id ].players or {}
+          --          m.db.tradeskills[ tradeskill ][ id ].players = m.db.tradeskills[ tradeskill ][ id ].players or {}
           table.insert( m.db.tradeskills[ tradeskill ][ id ].players, p )
         end
       end
@@ -317,10 +321,17 @@ function GuildInventory.add_item( item, slot, broadcast, add_count )
   local db_item = m.find( item.name, m.db.inventory, "name" )
 
   if db_item then
-    if add_count and db_item.data[ m.player ].count then
-      item.data[ m.player ].count = item.data[ m.player ].count + db_item.data[ m.player ].count
+    if add_count then
+      if db_item.data[ m.player ] and db_item.data[ m.player ].count then
+        item.data[ m.player ].count = item.data[ m.player ].count + db_item.data[ m.player ].count
+        --else
+        --db_item.data[ m.player ] = {}
+      end
     end
     for player, data in pairs( item.data ) do
+      if not db_item.data[ player ] then
+        db_item.data[ player ] = { count = 0 }
+      end
       db_item.data[ player ].count = data.count
 
       if data.price then
@@ -387,9 +398,18 @@ end
 ---@param broadcast boolean
 function GuildInventory.update_item_data( slot_index, count, price, broadcast )
   ---@type DBItem|nil
-  local db_item, index = m.find( slot_index, m.db.inventory, "slot" )
+  local db_item = m.find( slot_index, m.db.inventory, "slot" )
 
-  if db_item and (db_item.data[ m.player ].count ~= count or db_item.data[ m.player ].price ~= price) then
+  if not db_item then
+    m.debug( "update_item_data: missing db_item" )
+    return
+  end
+
+  if not db_item.data[ m.player ] then
+    db_item.data[ m.player ] = {}
+  end
+
+  if db_item.data[ m.player ].count ~= count or db_item.data[ m.player ].price ~= price then
     db_item.data[ m.player ].count = count
     db_item.data[ m.player ].price = price
 

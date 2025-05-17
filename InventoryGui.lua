@@ -54,6 +54,17 @@ function M.new( frame_builder, ace_serializer, notify )
 
   local ROWS = 5
 
+  local function save_position( self )
+    local point, _, relative_point, x, y = self:GetPoint()
+
+    m.db.frame_inventory.position = {
+      point = point,
+      relative_point = relative_point,
+      x = x,
+      y = y
+    }
+  end
+
   local function clear_cursor()
     if is_dragging then
       is_dragging = false
@@ -246,7 +257,7 @@ function M.new( frame_builder, ace_serializer, notify )
     return tab
   end
 
-  
+
 
   ---@param parent Frame
   ---@param slot_index integer
@@ -963,7 +974,7 @@ function M.new( frame_builder, ace_serializer, notify )
     ---@class InventoryFrame: Frame
     local frame = frame_builder.new()
         :name( "GuildInventoryFrame" )
-        :title( string.format( "GuildInventory v%s", m.version ) )
+        :title( string.format( "Guild Inventory v%s", m.version ) )
         :frame_style( "TOOLTIP" )
         :backdrop_color( 0, 0, 0, 1 )
         :close_button()
@@ -972,7 +983,14 @@ function M.new( frame_builder, ace_serializer, notify )
         :movable()
         :esc()
         :hidden()
+        :on_drag_stop( save_position )
         :build()
+
+    if m.db.frame_inventory.position then
+      local p = m.db.frame_inventory.position
+      frame:ClearAllPoints()
+      frame:SetPoint( p.point, UIParent, p.relative_point, p.x, p.y )
+    end
 
     frame:SetScript( "OnLeave", function()
       if MouseIsOver( frame ) then return end

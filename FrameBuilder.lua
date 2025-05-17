@@ -54,7 +54,7 @@ function M.new()
 			frame:SetBackdropColor( 0, 0, 0, 1 )
 
 			if options.frame_level then
-				frame:SetFrameLevel(options.frame_level)
+				frame:SetFrameLevel( options.frame_level )
 			end
 
 			local bottom_border = frame:CreateTexture( nil, "ARTWORK" )
@@ -69,7 +69,7 @@ function M.new()
 				btn_close:SetScript( "OnClick", function() parent:Hide() end )
 
 				if options.frame_level then
-					btn_close:SetFrameLevel(options.frame_level + 1)
+					btn_close:SetFrameLevel( options.frame_level + 1 )
 				end
 			end
 
@@ -124,7 +124,7 @@ function M.new()
 			end
 
 			if options.points then
-				for _, p in options.points do
+				for _, p in pairs( options.points ) do
 					frame:SetPoint( p.point, p.relative_region or UIParent, p.relative_point, p.x, p.y )
 				end
 			else

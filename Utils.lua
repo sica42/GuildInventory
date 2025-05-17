@@ -159,6 +159,10 @@ function M.get_item_name_colorized( item )
 	local color = ITEM_QUALITY_COLORS[ item.quality or 1 ]
 	local hex = string.format( "%02x%02x%02x", color.r * 255, color.g * 255, color.b * 255 )
 
+	if not item.quality and item.link then
+		hex = string.match(item.link, "|c[fF][fF]([0-9a-fA-F]+)")
+	end
+
 	return string.format( "|cFF%s%s|r", hex, item.name )
 end
 
@@ -249,7 +253,7 @@ end
 ---@return string
 ---@nodiscard
 function M.format_money( copper, no_color )
-	if type( copper ) ~= "number" then return "-" end
+	if type( copper ) ~= "number" then return "0" end
 
 	local gold = math.floor( copper / 10000 )
 	local silver = math.floor( (copper - gold * 10000) / 100 )

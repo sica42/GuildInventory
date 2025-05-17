@@ -20,14 +20,27 @@ local _G = getfenv()
 function M.new()
   local popup
   local selected_tradeskill
+  local selected
   local offset = 0
   local frame_items = {}
   local search_result = {}
+
+  local function save_position( self )
+    local point, _, relative_point, x, y = self:GetPoint()
+
+    m.db.frame_tradeskills.position = {
+      point = point,
+      relative_point = relative_point,
+      x = x,
+      y = y
+    }
+  end
 
   local function refresh()
     for i = 1, 5 do
       if search_result[ i ] then
         frame_items[ i ].set_item( search_result[ i + offset ] )
+        frame_items[ i ].set_selected( selected == i + offset )
       else
         frame_items[ i ]:Hide()
       end
@@ -53,6 +66,7 @@ function M.new()
     local info = {}
 
     info.text = "All tradeskills"
+    info.value = info.text
     info.notCheckable = true
     info.func = function( value )
       UIDropDownMenu_SetText( value, popup.dropdown_skill )
@@ -109,7 +123,16 @@ function M.new()
     refresh()
   end
 
-  local function show_recipe( item )
+  local function show_recipe( item, index )
+    if selected == index then
+      popup.crafters.clear()
+      popup.info.clear()
+      selected = nil
+      return
+    else
+      popup.crafters.set( item )
+      selected = index
+    end
 
     if item.skill == "Enchanting" then
       popup.info.set( item )
@@ -129,6 +152,8 @@ function M.new()
     else
       popup.info.clear( "AtlasLoot is required to view recipes." )
     end
+
+    refresh()
   end
 
   local function create_item( parent, index )
@@ -144,14 +169,14 @@ function M.new()
     frame.slot_index = index
     frame:SetHighlightTexture( "Interface\\QuestFrame\\UI-QuestTitleHighlight" )
     frame:SetScript( "OnMouseUp", function()
-      show_recipe( frame.item )
+      show_recipe( frame.item, frame.slot_index + offset )
     end )
 
-		--local selected_tex = frame:CreateTexture( nil, "BACKGROUND" )
-    --selected_tex:SetTexture( "Interface\\QuestFrame\\UI-QuestLogTitleHighlight" )
-    --selected_tex:SetAllPoints( frame )
-    --selected_tex:SetVertexColor( 0.3, 0.3, 1, 1 )
-    --selected_tex:Hide()
+    local selected_tex = frame:CreateTexture( nil, "BACKGROUND" )
+    selected_tex:SetTexture( "Interface\\QuestFrame\\UI-QuestLogTitleHighlight" )
+    selected_tex:SetAllPoints( frame )
+    selected_tex:SetVertexColor( 0.3, 0.3, 1, 1 )
+    selected_tex:Hide()
 
     ---@type Button
     local text_item = m.GuiElements.create_text_in_container( frame, nil, "Button" )
@@ -167,10 +192,12 @@ function M.new()
       else
         GameTooltip:SetHyperlink( m.get_item_string( frame.item ) )
       end
+      frame:LockHighlight()
     end )
 
     text_item:SetScript( "OnLeave", function()
       GameTooltip:Hide()
+      frame:UnlockHighlight()
     end )
 
     text_item:SetScript( "OnClick", function()
@@ -180,14 +207,17 @@ function M.new()
           return
         end
       end
-      show_recipe( frame.item )
+      show_recipe( frame.item, frame.slot_index + offset )
     end )
 
-    local text_players = frame:CreateFontString( nil, "ARTWORK", "GIFontNormalSmall" )
-    text_players:SetPoint( "Right", frame, "Right", -5, 0 )
-    text_players:SetHeight( 16 )
-    text_players:SetTextColor( 1, 1, 1, 1 )
-    text_players:SetJustifyH( "Right" )
+    ---@param select boolean
+    frame.set_selected = function( select )
+      if select then
+        selected_tex:Show()
+      else
+        selected_tex:Hide()
+      end
+    end
 
     frame.set_item = function( item )
       frame.item = item
@@ -197,12 +227,6 @@ function M.new()
         text_item:SetText( m.get_item_name_colorized( item ) )
       end
 
-      local players = ""
-      for _, player in item.players do
-        players = players .. player .. ", "
-      end
-
-      text_players:SetText( string.match( players, "(.-), $" ) )
       frame:Show()
     end
 
@@ -233,10 +257,67 @@ function M.new()
     return frame
   end
 
+  local function create_crafters_frame( parent )
+    local frame = m.FrameBuilder.new()
+        :parent( parent )
+        :point( "TopLeft", parent.border_results, "BottomLeft", 0, -5 )
+        :point( "Right", parent.btn_search, "Right", 0, 0 )
+        :height( 70 )
+        :frame_style( "TOOLTIP" )
+        :backdrop( { bgFile = "Interface/Buttons/WHITE8x8" } )
+        :backdrop_color( 0, 0, 0, 1 )
+        :build()
+
+    local label_crafters = frame:CreateFontString( nil, "ARTWORK", "GIFontHighlight" )
+    label_crafters:SetPoint( "TopLeft", frame, "TopLeft", 10, -10 )
+
+    local text_crafters = frame:CreateFontString( nil, "ARTWORK", "GIFontHighlight" )
+    text_crafters:SetPoint( "TopLeft", frame, "TopLeft", 10, -25 )
+    text_crafters:SetWidth( 300 )
+    text_crafters:SetJustifyH( "Left" )
+
+    local btn_reagents = m.GuiElements.create_button( frame, "Show reagents", 80, function()
+      if this:GetText() == "Show reagents" then
+        m.db.frame_tradeskills.show_reagents = true
+        this:SetText( "Hide reagents" )
+        parent.info:Show()
+        parent:SetHeight( 465 )
+      else
+        m.db.frame_tradeskills.show_reagents = false
+        this:SetText( "Show reagents" )
+        parent.info:Hide()
+        parent:SetHeight( 235 )
+      end
+    end )
+    btn_reagents:SetPoint( "BottomRight", frame, "BottomRight", -8, 10 )
+    btn_reagents:Hide()
+    frame.btn_reagents = btn_reagents
+
+    frame.clear = function()
+      label_crafters:SetText( "" )
+      text_crafters:SetText( "" )
+      btn_reagents:Hide()
+    end
+
+    frame.set = function( item )
+      local players = ""
+      for _, player in item.players do
+        local color = m.guild_member_online( player ) and "FFFFFF" or "AAAAAA"
+        players = players .. string.format( "|cFF%s%s|r, ", color, player )
+      end
+
+      label_crafters:SetText( string.format( "%s is craftable by:", m.get_item_name_colorized( item ) ) )
+      text_crafters:SetText( string.match( players, "(.-), $" ) )
+      btn_reagents:Show()
+    end
+
+    return frame
+  end
+
   local function create_info_frame( parent )
     local frame = m.FrameBuilder.new()
         :parent( parent )
-        :point( "TopLeft", parent.border_results, "BottomLeft", 0, -10 )
+        :point( "TopLeft", parent.crafters, "BottomLeft", 0, -5 )
         :point( "Right", parent.btn_search, "Right", 0, 0 )
         :height( 224 )
         :frame_style( "TOOLTIP" )
@@ -404,7 +485,6 @@ function M.new()
         end )
       else
         m.get_item_info( recipe.craftItem, function( item_info )
-          --local name, _, quality, _, _, _, _, _, texture = GetItemInfo( recipe.craftItem )
           local item = {
             name = item_info.name,
             id = recipe.craftItem,
@@ -467,14 +547,22 @@ function M.new()
         :title( string.format( "Guild Tradeskills v%s", m.version ) )
         :frame_style( "TOOLTIP" )
         :frame_level( 100 )
-        :backdrop_color( 0, 0, 0, 1 )
+        :backdrop( { bgFile = "Interface/Buttons/WHITE8x8" } )
+        :backdrop_color( 0, 0, 0, 0.9 )
         :close_button()
         :width( 427 )
-        :height( 396 )
+        :height( 235 )
         :movable()
         :esc()
         :hidden()
+        :on_drag_stop( save_position )
         :build()
+
+    if m.db.frame_tradeskills.position then
+      local p = m.db.frame_tradeskills.position
+      frame:ClearAllPoints()
+      frame:SetPoint( p.point, UIParent, p.relative_point, p.x, p.y )
+    end
 
     local btn_inventory = m.GuiElements.tiny_button( frame, "I", "Toggle Guild Inventory" )
     btn_inventory:SetPoint( "TopRight", frame, "TopRight", -20, -4 )
@@ -551,7 +639,14 @@ function M.new()
       table.insert( frame_items, item )
     end
 
+    frame.crafters = create_crafters_frame( frame )
     frame.info = create_info_frame( frame )
+    if not m.db.frame_tradeskills.show_reagents then
+      frame.info:Hide()
+    else
+      frame:SetHeight( 465 )
+      frame.crafters.btn_reagents:SetText( "Hide reagents" )
+    end
 
     return frame
   end

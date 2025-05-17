@@ -325,18 +325,29 @@ function M.new( ace_timer, ace_serializer, ace_comm )
 								item_link = m.make_enchant_link( v.id, name )
 							end
 						else
-							m.debug("empty data enchant data??")
+							m.debug("empty enchant data??")
 						end
 					else
-						local name, _, quality = GetItemInfo( v.id )
+						m.get_item_info(v.id, function( item_info )
+							if item_info then
+								local link = m.make_item_link( v.id, item_info.name, item_info.quality )
+								if link then
+									m.update_tradeskill_item( tradeskill, link, v.players )
+								end
+							else
+								m.debug("No item_info for " .. tostring(v.id))
+							end
+						end )
+						--local name, _, quality = GetItemInfo( v.id )
 						--m.debug( string.format( "Updating item (%d) %s", v.id, tostring(name )) )
-						if name and quality then
-							item_link = m.make_item_link( v.id, name, quality )
-						else
-							m.debug( "Unable to find " .. tostring(v.id) )
-							m.tooltip:SetHyperlink( "item:" .. v.id )
-							ace_timer.ScheduleTimer( M, get_item_info, 1, tradeskill, v.id, v.players )
-						end
+						--if name and quality then
+--							item_link = m.make_item_link( v.id, name, quality )
+						--else
+
+							--m.debug( "Unable to find " .. tostring(v.id) )
+							--m.tooltip:SetHyperlink( "item:" .. v.id )
+							--ace_timer.ScheduleTimer( M, get_item_info, 1, tradeskill, v.id, v.players )
+						--end
 					end
 				end
 
