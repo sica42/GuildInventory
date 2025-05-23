@@ -85,6 +85,7 @@ function M.new( ace_timer, ace_serializer, ace_comm )
 		i = "items",
 		m = "message",
 		ts = "timestamp",
+		lu = "last_update",
 		ilu = "inventory_last_update",
 		tlu = "tradeskills_last_update",
 	}
@@ -119,7 +120,9 @@ function M.new( ace_timer, ace_serializer, ace_comm )
 	local function send_item( item )
 		local item_data = {}
 		for k, v in pairs( item.data ) do
-			item_data[ k ] = v
+			item_data[ k ] = {}
+			if v.count then item_data[ k ].c = v.count end
+			if v.price then item_data[ k ].p = v.price end
 		end
 
 		broadcast( MessageCommand.Item, {
@@ -128,6 +131,7 @@ function M.new( ace_timer, ace_serializer, ace_comm )
 			t = string.gsub( item.icon, "Interface\\Icons\\", "" ),
 			q = item.quality,
 			d = item_data,
+			lu = item.last_update,
 			x = item.deleted
 		} )
 	end
@@ -137,7 +141,9 @@ function M.new( ace_timer, ace_serializer, ace_comm )
 		for _, item in ipairs( items ) do
 			local item_data = {}
 			for k, v in pairs( item.data ) do
-				item_data[ k ] = v
+				item_data[ k ] = {}
+				if v.count then item_data[ k ].c = v.count end
+				if v.price then item_data[ k ].p = v.price end
 			end
 
 			table.insert( data, {
@@ -146,6 +152,7 @@ function M.new( ace_timer, ace_serializer, ace_comm )
 				t = string.gsub( item.icon, "Interface\\Icons\\", "" ),
 				q = item.quality,
 				d = item_data,
+				lu = item.last_update,
 				x = item.deleted
 			} )
 		end
@@ -177,15 +184,6 @@ function M.new( ace_timer, ace_serializer, ace_comm )
 			m = request_data.message,
 			i = items
 		} )
-
-		--m.debug("Send item request ID:" .. tostring(request_data.id) .. ", TO: " .. tostring(request_data.to))
-		--m.debug(tostring( m.guild_member_online( request_data.to ) ))
-		--if m.guild_member_online( request_data.to ) then
-		--m.debug( request_data.to .. " is online, delete itemrequest." )
-		--local _, index = m.find( request_data.id, m.db.requests, "id" )
-		--m.db.requests[ index ].deleted = time()
-		--table.remove( m.db.requests, index )
-		--end
 	end
 
 	local function send_itemrequests( to )
@@ -242,23 +240,6 @@ function M.new( ace_timer, ace_serializer, ace_comm )
 		broadcast( MessageCommand.Admin, data )
 	end
 
-	local function get_item_info( tradeskill, id, players )
-		local name, _, quality = GetItemInfo( id )
-		local item_link
-
-		if tradeskill == "Enchanting" then
-			item_link = m.make_enchant_link( id, name )
-		else
-			item_link = m.make_item_link( id, name, quality )
-		end
-
-		if item_link then
-			m.update_tradeskill_item( tradeskill, item_link, players )
-		else
-			m.debug("still error for " .. id)
-		end
-	end
-
 	---@param command string
 	---@param data table
 	---@param sender string
@@ -266,7 +247,8 @@ function M.new( ace_timer, ace_serializer, ace_comm )
 		if command == MessageCommand.Item then
 			--
 			-- Receive single item
-			--	
+			--
+			if not data.last_update then data.last_update = m.get_server_timestamp() end
 			m.add_item( data )
 			if m.gui.is_visible() then m.gui.refresh() end
 		elseif command == MessageCommand.Items then
@@ -274,6 +256,7 @@ function M.new( ace_timer, ace_serializer, ace_comm )
 			-- Receive multiple items
 			--
 			for _, item in ipairs( data ) do
+				if not item.last_update then item.last_update = m.get_server_timestamp() end
 				m.add_item( item )
 			end
 
@@ -301,7 +284,7 @@ function M.new( ace_timer, ace_serializer, ace_comm )
 			local _, index = m.find( data.id, m.db.requests, "id" )
 			if index then
 				m.debug( string.format( "Mark item request (%d) as deleted", data.id ) )
-				m.db.requests[ index ].deleted = time()
+				m.db.requests[ index ].deleted = m.get_server_timestamp()
 			end
 		elseif command == MessageCommand.Tradeskill then
 			--
@@ -312,51 +295,43 @@ function M.new( ace_timer, ace_serializer, ace_comm )
 			m.db.tradeskills[ tradeskill ] = m.db.tradeskills[ tradeskill ] or {}
 
 			for _, v in data.recipes do
-				local item_link
-				if m.db.tradeskills[ tradeskill ][ v.id ] and m.db.tradeskills[ tradeskill ][ v.id ].link then
-					item_link = m.db.tradeskills[ tradeskill ][ v.id ].link
-				else
-					if tradeskill == "Enchanting" then
-						if v and v.id then
-							local name = m.Enchants[ v.id ] and m.Enchants[ v.id ].name
-							if not name then
-								m.error( string.format( "Unknown enchantment received (%d)", v.id ) )
-							else
-								item_link = m.make_enchant_link( v.id, name )
-							end
-						else
-							m.debug("empty enchant data??")
-						end
+				if v.id then
+					local item_link
+					if m.db.tradeskills[ tradeskill ][ v.id ] and m.db.tradeskills[ tradeskill ][ v.id ].link then
+						item_link = m.db.tradeskills[ tradeskill ][ v.id ].link
 					else
-						m.get_item_info(v.id, function( item_info )
-							if item_info then
-								local link = m.make_item_link( v.id, item_info.name, item_info.quality )
-								if link then
-									m.update_tradeskill_item( tradeskill, link, v.players )
+						if tradeskill == "Enchanting" then
+							if v and v.id then
+								local name = m.Enchants[ v.id ] and m.Enchants[ v.id ].name
+								if not name then
+									m.error( string.format( "Unknown enchantment received (%d)", v.id ) )
+								else
+									item_link = m.make_enchant_link( v.id, name )
 								end
 							else
-								m.debug("No item_info for " .. tostring(v.id))
+								m.debug( "empty enchant data??" )
 							end
-						end )
-						--local name, _, quality = GetItemInfo( v.id )
-						--m.debug( string.format( "Updating item (%d) %s", v.id, tostring(name )) )
-						--if name and quality then
---							item_link = m.make_item_link( v.id, name, quality )
-						--else
-
-							--m.debug( "Unable to find " .. tostring(v.id) )
-							--m.tooltip:SetHyperlink( "item:" .. v.id )
-							--ace_timer.ScheduleTimer( M, get_item_info, 1, tradeskill, v.id, v.players )
-						--end
+						else
+							m.get_item_info( v.id, function( item_info, players )
+								if item_info then
+									local link = m.make_item_link( item_info.id, item_info.name, item_info.quality )
+									if link then
+										m.update_tradeskill_item( tradeskill, link, players )
+									end
+								else
+									m.debug( "No item_info for " .. tostring( v.id ) )
+								end
+							end, v.players )
+						end
 					end
-				end
 
-				if item_link then
-					m.update_tradeskill_item( tradeskill, item_link, v.players )
+					if item_link then
+						m.update_tradeskill_item( tradeskill, item_link, v.players )
+					end
 				end
 			end
 
-			m.db.tradeskills_last_update = time()
+			m.db.tradeskills_last_update = m.get_server_timestamp()
 		elseif command == MessageCommand.RequestTradeskills and data.player == m.player then
 			--
 			-- Request for tradeskills
@@ -391,7 +366,7 @@ function M.new( ace_timer, ace_serializer, ace_comm )
 			if not best_ping[ data.ping ] or (data and data[ field ] > best_ping[ data.ping ].last_update) then
 				best_ping[ data.ping ] = {
 					player = sender,
-					last_update = data and data[ field ] or time()
+					last_update = data and data[ field ] or m.get_server_timestamp()
 				}
 				m.debug( data.ping .. "=" .. m.dump( best_ping[ data.ping ] ) )
 			end

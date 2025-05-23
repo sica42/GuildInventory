@@ -96,61 +96,26 @@ function M.get_perfect_pixel()
 	return M.pixel
 end
 
----@param item_link ItemLink
----@return number|nil
-function M.get_item_id( item_link )
-	for item_id in string.gmatch( item_link, "|c%x%x%x%x%x%x%x%x|Hitem:(%d+):.+|r" ) do
-		return tonumber( item_id )
-	end
-	for item_id in string.gmatch( item_link, "|c%x%x%x%x%x%x%x%x|Henchant:(%d+).+|r" ) do
-		return tonumber( item_id )
-	end
-end
-
----@param item_id integer?
----@return ItemQuality
-function M.get_item_quality( item_id )
-	if not item_id then return 0 end
-	local _, _, quality = GetItemInfo( item_id )
-	return quality
-end
-
 ---@param item_link string
----@return number|nil quality
-function M.get_item_quality_from_link( item_link )
-	local hex = string.match( item_link, "^|c(%x%x%x%x%x%x%x%x)" )
+---@return integer? id
+---@return string? name
+---@return integer? quality
+function M.parse_item_link( item_link )
+	if type( item_link ) ~= "string" then return nil, nil, nil end
+
+	local item_id = tonumber( string.match( item_link, ":(%d+)" ) )
+	local name = string.match( item_link, "|h%[(.-)%]|h" )
 	local quality
-	if hex then
-		quality = QUALITY_COLORS[ string.lower( hex ) ]
+
+	local color = string.match( item_link, "|c(%x%x%x%x%x%x%x%x)" )
+	if color then
+		quality = QUALITY_COLORS[ string.lower( color ) ]
+	else
+		local _, _, q = GetItemInfo( item_id )
+		quality = q or 1
 	end
 
-	if not quality then
-		_, _, quality = GetItemInfo( item_link )
-	end
-
-	return tonumber( quality )
-end
-
----@param item Item|integer
----@return string
-function M.get_item_string( item )
-	if type( item ) == "table" then
-		return string.format( "item:%d:0:0:0:0:0:0:0", item.id )
-	elseif type( item ) == "number" then
-		return string.format( "item:%d:0:0:0:0:0:0:0", item )
-	end
-
-	return ""
-end
-
-function M.get_enchant_string( item )
-	return string.format( "enchant:%d", item.id )
-end
-
----@param item_link string
----@return string
-function M.get_item_name( item_link )
-	return string.match( item_link or "", "%[(.-)%]" )
+	return item_id, name, quality
 end
 
 ---@param item Item
@@ -160,21 +125,16 @@ function M.get_item_name_colorized( item )
 	local hex = string.format( "%02x%02x%02x", color.r * 255, color.g * 255, color.b * 255 )
 
 	if not item.quality and item.link then
-		hex = string.match(item.link, "|c[fF][fF]([0-9a-fA-F]+)")
+		hex = string.match( item.link, "|c[fF][fF]([0-9a-fA-F]+)" )
 	end
 
 	return string.format( "|cFF%s%s|r", hex, item.name )
 end
 
----@param item Item
+---@param id integer
+---@param name string
+---@param quality integer
 ---@return string
-function M.get_item_link( item )
-	local color = ITEM_QUALITY_COLORS[ item.quality or 1 ]
-	local hex = string.format( "%02x%02x%02x", color.r * 255, color.g * 255, color.b * 255 )
-
-	return string.format( "|cFF%s|Hitem:%d:0:0:0|h[%s]|h|r", hex, item.id, item.name )
-end
-
 function M.make_item_link( id, name, quality )
 	local color = ITEM_QUALITY_COLORS[ quality or 1 ]
 	local hex = string.format( "%02x%02x%02x", color.r * 255, color.g * 255, color.b * 255 )
@@ -218,10 +178,33 @@ function M.guild_member_online( player_name )
 	return false
 end
 
+function M.get_server_timestamp()
+	local server_hour, server_min = GetGameTime()
+	local local_time = date( "*t" )
+
+	local t = {
+		year = local_time.year,
+		month = local_time.month,
+		day = local_time.day,
+		hour = server_hour,
+		min = server_min,
+		sec = 0,
+	}
+
+	local hour_diff = server_hour - local_time.hour
+	if hour_diff <= -20 then
+		t.day = t.day + 1
+	elseif hour_diff >= 20 then
+		t.day = t.day - 1
+	end
+
+	return time( t )
+end
+
 ---@param timestamp integer
 ---@return string
 function M.time_ago( timestamp )
-	local now = time()
+	local now = M.get_server_timestamp()
 	local diff = now - timestamp
 
 	if diff < 0 then
@@ -386,20 +369,22 @@ end
 
 ---@param id integer
 ---@param ufunc function
+---@param players table?
 ---@return nil
-function M.get_item_info( id, ufunc )
-	local function callback( item_id, cbfunc )
+function M.get_item_info( id, ufunc, players )
+	local function callback( item_id, cbfunc, _players )
 		local data = { GetItemInfo( item_id ) }
 		cbfunc( {
+			id = item_id,
 			name = data[ 1 ],
 			link = data[ 2 ],
 			quality = data[ 3 ],
-			texture = data[ 9 ]
-		} )
+			texture = data[ 9 ],
+		}, _players )
 	end
 
 	if GetItemInfo( id ) then
-		callback( id, ufunc )
+		callback( id, ufunc, players )
 		return
 	end
 
@@ -413,7 +398,8 @@ function M.get_item_info( id, ufunc )
 
 	table.insert( M.get_item_info_items, {
 		id = id,
-		ufunc = ufunc
+		ufunc = ufunc,
+		players = players
 	} )
 
 	if not M.item_info_frame:GetScript( "OnUpdate" ) then
@@ -428,7 +414,7 @@ function M.get_item_info( id, ufunc )
 			M.tooltip:SetHyperlink( "item:" .. item_data.id )
 
 			if GetItemInfo( item_data.id ) then
-				callback( item_data.id, item_data.ufunc )
+				callback( item_data.id, item_data.ufunc, item_data.players )
 				table.remove( M.get_item_info_items, 1 )
 			end
 		end )
@@ -470,11 +456,6 @@ function M.scan_tooltip( link, callback, max_attempts, delay )
 		M.tooltip:ClearLines()
 		M.tooltip:SetHyperlink( current_scan.link )
 
-	--	if not current_scan.initialized then
-			--current_scan.initialized = true
-			--return
-		--end
-
 		local num_lines = M.tooltip:NumLines()
 		if num_lines and num_lines > 0 then
 			local lines = {}
@@ -494,10 +475,13 @@ function M.scan_tooltip( link, callback, max_attempts, delay )
 		end
 
 		if current_scan.attempt >= current_scan.max_attempts then
-			local scan_callback = current_scan.callback
-			current_scan = nil
 			M.tooltip_scan_frame:SetScript( "OnUpdate", nil )
-			scan_callback( nil )
+			M.debug( "Failed to scan tooltip for " .. current_scan.link )
+			if current_scan.callback then
+				current_scan.callback( nil )
+			end
+
+			current_scan = nil
 			start_next_scan()
 		end
 	end

@@ -1,3 +1,4 @@
 <Bindings>
 	<Binding name="Toggle guild inventory" header="GUILDINVENTORY">GuildInventory.gui.toggle()</Binding>
+	<Binding name="Toggle guild tradeskills" header="GUILDINVENTORY">GuildInventory.tsgui.toggle()</Binding>
 </Bindings>
