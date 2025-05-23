@@ -108,14 +108,14 @@ function GuildInventory.events.PLAYER_LOGIN()
 	m.db.frame_tradeskills = m.db.frame_tradeskills or {}
 
 
-	if not m.db.version or tonumber( m.db.version ) < 0.6 then
-		m.debug( "Clearing all data." )
-		m.db.inventory = {}
-		m.db.inventory_last_update = nil
-		m.db.tradeskills = {}
-		m.db.tradeskills_last_update = nil
-		m.db.requests = {}
-	end
+	--if not m.db.version or tonumber( m.db.version ) < 0.6 then
+---		m.debug( "Clearing all data." )
+		--m.db.inventory = {}
+		--m.db.inventory_last_update = nil
+		--m.db.tradeskills = {}
+		--m.db.tradeskills_last_update = nil
+		--m.db.requests = {}
+	--end
 	m.db.version = m.version
 
 	m.player = UnitName( "player" )
@@ -335,7 +335,7 @@ function GuildInventory.add_item( item, slot, broadcast, add_count )
 			m.debug( string.format( "No update for %s", item.name ) )
 			return
 		end
-
+		m.debug( string.format( "Updatating %s", item.name ) )
 		if add_count then
 			if db_item.data[ m.player ] and db_item.data[ m.player ].count then
 				item.data[ m.player ].count = item.data[ m.player ].count + db_item.data[ m.player ].count

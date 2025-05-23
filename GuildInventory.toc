@@ -1,7 +1,7 @@
 ## Interface: 11200
 ## Title: GuildInventory
 ## Author: Sica
-## Version: 0.8.1
+## Version: 0.8.2
 ## Notes: Share items in an inventory available to everyone in your guild
 ## SavedVariablesPerCharacter: GuildInventoryDB
 
