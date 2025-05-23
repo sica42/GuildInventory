@@ -503,7 +503,7 @@ function M.new()
 										table.insert( reagents, {
 											id = m.Reagents[ name ],
 											name = name,
-											link = m.make_item_link(  m.Reagents[ name ], name, quality ),
+											link = m.make_item_link( m.Reagents[ name ], name, quality ),
 											count = tonumber( count ) or 1,
 											icon = texture
 										} )
@@ -568,14 +568,15 @@ function M.new()
 
 					for i, reagent_data in recipe.reagents do
 						local reagent_count = reagent_data[ 2 ] or 1
-						local reagent_name, _, reagent_quality, _, _, _, _, _, reagent_texture = GetItemInfo( reagent_data[ 1 ] )
-						set_reagent( i, reagent_data[ 1 ], reagent_name, reagent_texture, reagent_count )
-						frame.recipe.reagent_data[ i ] = {
-							id = reagent_data[ 1 ],
-							name = reagent_name,
-							link = m.make_item_link( reagent_data[ 1 ], reagent_name, reagent_quality ),
-							count = reagent_count
-						}
+						m.get_item_info( reagent_data[ 1 ], function( reagent_info, data )
+							set_reagent( data.i, reagent_info.id, reagent_info.name, reagent_info.texture, reagent_count )
+							frame.recipe.reagent_data[ data.i ] = {
+								id = reagent_info.id,
+								name = reagent_info.name,
+								link = m.make_item_link( reagent_info.id, reagent_info.name, reagent_info.quality ),
+								count = reagent_count
+							}
+						end, { i = i } )
 					end
 				end )
 			end

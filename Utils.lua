@@ -369,10 +369,10 @@ end
 
 ---@param id integer
 ---@param ufunc function
----@param players table?
+---@param data table?
 ---@return nil
-function M.get_item_info( id, ufunc, players )
-	local function callback( item_id, cbfunc, _players )
+function M.get_item_info( id, ufunc, data )
+	local function callback( item_id, cbfunc, _data )
 		local data = { GetItemInfo( item_id ) }
 		cbfunc( {
 			id = item_id,
@@ -380,11 +380,11 @@ function M.get_item_info( id, ufunc, players )
 			link = data[ 2 ],
 			quality = data[ 3 ],
 			texture = data[ 9 ],
-		}, _players )
+		}, _data )
 	end
 
 	if GetItemInfo( id ) then
-		callback( id, ufunc, players )
+		callback( id, ufunc, data )
 		return
 	end
 
@@ -399,7 +399,7 @@ function M.get_item_info( id, ufunc, players )
 	table.insert( M.get_item_info_items, {
 		id = id,
 		ufunc = ufunc,
-		players = players
+		data = data
 	} )
 
 	if not M.item_info_frame:GetScript( "OnUpdate" ) then
@@ -414,7 +414,7 @@ function M.get_item_info( id, ufunc, players )
 			M.tooltip:SetHyperlink( "item:" .. item_data.id )
 
 			if GetItemInfo( item_data.id ) then
-				callback( item_data.id, item_data.ufunc, item_data.players )
+				callback( item_data.id, item_data.ufunc, item_data.data )
 				table.remove( M.get_item_info_items, 1 )
 			end
 		end )
