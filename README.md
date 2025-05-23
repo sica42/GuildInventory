@@ -31,6 +31,11 @@ You can assign a hotkey in Key Bindings to toggle the window.
 Use the text field to search for any recipe you're looking for. You can limit the search to any specific tradeskill by using the dropdown. Clicking search without any input will show all recipes.
 Click a recipe to see who can craft it. You can also view reagents for recipes by clicking the "Show reagents" button.
 
+With your chat open, you can shift-click items in the list to say the item. You can also shift-click the item icon to say the recipe with required reagents.
+Message will be posted to your current chat channel, so ensure you have the right channel set before clicking.
+
+You can assign a hotkey in Key Bindings to toggle the window.
+
 ---
 
 ## 🧰 Slash Commands
